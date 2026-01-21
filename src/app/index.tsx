@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,14 +17,14 @@ export default function SplashScreenPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.8);
   const textOpacity = useSharedValue(0);
 
   const navigateNext = () => {
-    if (isLoading) return;
-
+    // Always navigate after animation, don't wait for loading state
     if (user?.stravaConnected && user?.onboardingComplete) {
       router.replace('/home');
     } else if (user?.stravaConnected) {
@@ -45,13 +45,21 @@ export default function SplashScreenPage() {
     // Animate text
     textOpacity.value = withDelay(400, withTiming(1, { duration: 500 }));
 
-    // Navigate after animation
+    // Set animation complete after delay
     const timer = setTimeout(() => {
-      runOnJS(navigateNext)();
+      setAnimationComplete(true);
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, []);
+
+  // Navigate when animation is complete and store is ready (or after timeout)
+  useEffect(() => {
+    if (animationComplete) {
+      // Navigate even if still loading - the store will hydrate and we can handle it
+      navigateNext();
+    }
+  }, [animationComplete, isLoading]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,

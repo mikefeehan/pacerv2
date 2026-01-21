@@ -53,6 +53,9 @@ function RootLayoutNav() {
         <Stack.Screen name="strava-post" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
         <Stack.Screen name="invite-pacer" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="public-pacers" />
+        <Stack.Screen name="public-pacer-profile" />
+        <Stack.Screen name="public-pacers-category" />
       </Stack>
     </ThemeProvider>
   );
