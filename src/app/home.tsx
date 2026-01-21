@@ -14,6 +14,7 @@ import {
   User,
   Globe,
 } from 'lucide-react-native';
+import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
 import { useAuthStore, usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
@@ -167,11 +168,8 @@ export default function HomeScreen() {
           className="flex-row items-center justify-between px-6 py-4"
         >
           <View className="flex-row items-center">
-            <Image
-              source={require('../../public/image-1768984637.png')}
-              style={{ width: 100, height: 40 }}
-              resizeMode="contain"
-            />
+            <PacerLogo size={36} />
+            <Text className="text-xl font-bold text-pacer-white ml-2 tracking-wider">PACER</Text>
           </View>
           <Pressable
             onPress={() => router.push('/settings')}

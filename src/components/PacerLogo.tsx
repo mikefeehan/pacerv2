@@ -8,7 +8,7 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Rect } from 'react-native-svg';
 import { cn } from '@/lib/cn';
 
 interface PacerLogoProps {
@@ -16,6 +16,7 @@ interface PacerLogoProps {
   animated?: boolean;
   intensity?: 'idle' | 'active' | 'hype';
   className?: string;
+  showAccent?: boolean;
 }
 
 export function PacerLogo({
@@ -23,6 +24,7 @@ export function PacerLogo({
   animated = false,
   intensity = 'idle',
   className,
+  showAccent = true,
 }: PacerLogoProps) {
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.6);
@@ -57,6 +59,9 @@ export function PacerLogo({
     opacity: pulseOpacity.value,
   }));
 
+  const accentColor = '#FF6B35';
+  const primaryColor = '#FAFAFA';
+
   return (
     <View className={cn('items-center justify-center', className)}>
       {/* Pulse ring behind logo */}
@@ -68,7 +73,7 @@ export function PacerLogo({
               width: size * 1.4,
               height: size * 1.4,
               borderRadius: size * 0.7,
-              backgroundColor: '#FF6B35',
+              backgroundColor: accentColor,
             },
             pulseStyle,
           ]}
@@ -80,30 +85,60 @@ export function PacerLogo({
         style={{
           width: size,
           height: size,
-          borderRadius: size * 0.25,
-          backgroundColor: '#141416',
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 1,
-          borderColor: '#2A2A2E',
         }}
       >
-        <Svg width={size * 0.6} height={size * 0.6} viewBox="0 0 48 48">
-          {/* Running shoe silhouette */}
+        <Svg width={size} height={size} viewBox="0 0 64 64">
+          {/* Running shoe - sleek modern silhouette */}
           <Path
-            d="M8 32 L12 28 L16 30 L20 26 L26 28 L32 24 L38 26 L42 22 L44 24 L44 32 L40 36 L8 36 Z"
-            fill="#FAFAFA"
-            strokeWidth={0}
+            d="M8 42
+               C8 42 10 38 14 36
+               L18 35
+               C20 34 22 33 24 33
+               L28 33
+               C30 32 34 30 38 30
+               L44 30
+               C48 30 52 32 54 34
+               L56 36
+               C58 38 58 40 56 42
+               L54 44
+               C52 46 48 47 44 47
+               L20 47
+               C14 47 10 46 8 44
+               L8 42Z"
+            fill={primaryColor}
           />
-          {/* Audio wave accent */}
+          {/* Shoe detail - swoosh line */}
           <Path
-            d="M14 18 L14 22 M20 14 L20 22 M26 16 L26 22 M32 12 L32 22"
-            stroke="#FF6B35"
-            strokeWidth={3}
+            d="M16 40 Q28 36 42 38"
+            stroke="#0A0A0B"
+            strokeWidth={2}
+            fill="none"
             strokeLinecap="round"
           />
-          {/* Small pulse dot */}
-          <Circle cx="38" cy="16" r="3" fill="#FF6B35" />
+          {/* Motion lines trailing behind */}
+          <Path
+            d="M4 38 L10 38"
+            stroke={primaryColor}
+            strokeWidth={2}
+            strokeLinecap="round"
+            opacity={0.6}
+          />
+          <Path
+            d="M2 42 L8 42"
+            stroke={primaryColor}
+            strokeWidth={2}
+            strokeLinecap="round"
+            opacity={0.4}
+          />
+
+          {/* Audio waveform above shoe */}
+          <Rect x="20" y="18" width="2.5" height="8" rx="1" fill={primaryColor} />
+          <Rect x="26" y="14" width="2.5" height="12" rx="1" fill={showAccent ? accentColor : primaryColor} />
+          <Rect x="32" y="16" width="2.5" height="10" rx="1" fill={primaryColor} />
+          <Rect x="38" y="12" width="2.5" height="14" rx="1" fill={showAccent ? accentColor : primaryColor} />
+          <Rect x="44" y="17" width="2.5" height="9" rx="1" fill={primaryColor} />
         </Svg>
       </View>
     </View>
