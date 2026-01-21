@@ -48,20 +48,6 @@ export const MOCK_PUBLIC_PACERS: PublicPacer[] = [
 
   // Top Fired Up Pacers
   {
-    id: 'pub_4',
-    name: 'Marcus "Thunder" James',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
-    isVerified: false,
-    bio: 'Former drill sergeant. Now I yell at runners instead.',
-    vibesOffered: ['fired_up', 'angry', 'harsh_coach'],
-    musicStyles: ['hip_hop', 'rock'],
-    bestUseCase: 'Final mile pushes when you want to quit',
-    totalRunsPaced: 12340,
-    paceRecoveryScore: 96,
-    aiVoiceEnabled: true,
-    categories: ['top_fired_up', 'best_harsh_coach'],
-  },
-  {
     id: 'pub_5',
     name: 'Elena Rodriguez',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop&crop=face',
