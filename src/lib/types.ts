@@ -1,6 +1,9 @@
 // PACER Data Types
 
-// Vibe = the energy/tone for the entire run
+// Pacer Type = the core identity a Pacer chooses (required, single selection)
+export type PacerType = 'cheerful' | 'fired_up' | 'harsh_coach' | 'calm';
+
+// Vibe = the energy/tone for the entire run (can be any type, runner's choice)
 export type VibeType = 'cheerful' | 'fired_up' | 'angry' | 'harsh_coach' | 'calm';
 export type VoiceMode = 'real_only' | 'ai_only' | 'mix';
 export type IntensityLevel = 'low' | 'medium' | 'high';
@@ -8,7 +11,47 @@ export type TriggerType = 'pace_drop' | 'late_run' | 'stall';
 export type VoiceType = 'real' | 'ai';
 export type PacerStatus = 'invited' | 'accepted' | 'blocked' | 'ready' | 'needs_setup';
 
-// Vibe configuration with descriptions
+// Pacer Type configuration (for onboarding identity selection)
+export interface PacerTypeConfig {
+  type: PacerType;
+  label: string;
+  emoji: string;
+  description: string;
+  examplePhrases: string[];
+}
+
+export const PACER_TYPES: PacerTypeConfig[] = [
+  {
+    type: 'cheerful',
+    label: 'Cheerful / Supportive',
+    emoji: '😊',
+    description: 'Positive, encouraging, keeps things light.',
+    examplePhrases: ["You've got this.", "Nice work.", "Stay smooth."],
+  },
+  {
+    type: 'fired_up',
+    label: 'Fired Up',
+    emoji: '🔥',
+    description: 'High energy, motivating, hype-focused.',
+    examplePhrases: ["Let's go.", "This is the moment.", "Push through."],
+  },
+  {
+    type: 'harsh_coach',
+    label: 'Harsh Coach',
+    emoji: '🧱',
+    description: 'No excuses, tough love, push through.',
+    examplePhrases: ["Push mode.", "No slowing down now.", "Earn it."],
+  },
+  {
+    type: 'calm',
+    label: 'Calm / Steady',
+    emoji: '😌',
+    description: 'Grounded, focused, steady pace.',
+    examplePhrases: ["Relax your shoulders.", "Steady pace.", "You're in control."],
+  },
+];
+
+// Vibe configuration with descriptions (for runner vibe selection)
 export interface VibeConfig {
   type: VibeType;
   label: string;
@@ -38,7 +81,8 @@ export interface User {
 export interface VoiceMemo {
   id: string;
   url: string;
-  vibeTag?: VibeType; // Which vibe this memo is for
+  vibeTag?: VibeType; // Which vibe this memo is for (undefined = bonus memo)
+  isBonus?: boolean; // True for bonus custom memos (not tied to vibe)
   duration: number; // seconds
   name?: string;
   createdAt: string;
@@ -46,7 +90,18 @@ export interface VoiceMemo {
 
 export interface PacerProfile {
   pacerUserId: string;
+  // Core identity (required)
+  primaryPacerType: PacerType; // The Pacer's chosen identity
+  // Voice content
+  corePhrases: VoiceMemo[]; // 3+ required phrases matching primaryPacerType
+  bonusMemos: VoiceMemo[]; // 0-2 optional personal memos
+  additionalVibes: { // Optional additional vibe recordings
+    vibe: VibeType;
+    phrases: VoiceMemo[];
+  }[];
+  // Legacy field for backwards compatibility
   voiceMemos: VoiceMemo[];
+  // Settings
   aiVoiceEnabled: boolean;
   spotifyConnected: boolean;
   spotifyProfileRef?: string;

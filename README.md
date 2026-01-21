@@ -8,15 +8,33 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 
 - **Strava Integration**: Connect your Strava account to track runs
 - **Pacer System**: Invite friends to become your Pacers
+- **Pacer Identity**: Choose your Pacer type (Cheerful, Fired Up, Harsh Coach, Calm)
 - **Public Pacers**: Discover and add verified/curated public pacers
 - **Multi-Pacer Support**: Select multiple pacers per run (e.g., "Ashley + Kevin")
 - **Vibe System**: Choose a single vibe (tone) for the entire run
-- **Voice Memos**: Record motivational messages for friends
+- **Voice Memos**: Record 3 core phrases + optional bonus memos
 - **AI Voice**: Generate new motivational lines in your voice (with consent)
 - **Music Sharing**: Share your Spotify playlists for runs
 - **Struggle Detection**: Automatic detection of when you need a boost
 - **Hype Events**: Voice + music triggered during tough moments
 - **Haptic Feedback**: Vibe-specific haptic patterns during hype moments
+
+## Becoming a Pacer
+
+To become a Pacer (under 60 seconds):
+
+1. **Choose Identity**: Select one Pacer type that defines how runners experience you
+2. **Record Phrases**: Record 3 short phrases (2-4 seconds) matching your style
+3. **Bonus Memos** (optional): Add up to 2 personal messages for special moments
+
+| Pacer Type | Style | Example Phrases |
+|------------|-------|-----------------|
+| Cheerful | Positive, encouraging | "You've got this", "Nice work" |
+| Fired Up | High energy, hype | "Let's go!", "Push through" |
+| Harsh Coach | Tough love | "Push mode", "Earn it" |
+| Calm | Grounded, steady | "Steady pace", "You're in control" |
+
+**Bonus memos** are played sparingly during late-run or strong recovery moments.
 
 ## Public Pacers
 
@@ -55,7 +73,7 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 1. **Splash** → Brand intro with animated logo
 2. **Welcome** → Onboarding with "How it works" modal
 3. **Strava Connect** → Required OAuth connection
-4. **Onboarding** → Create your Pacer Pack (voice memos, AI consent, music)
+4. **Onboarding** → 3-step Pacer setup (identity, phrases, bonus memos)
 5. **Home** → Select your Pacers for today's run
 6. **Pre-Run** → Configure pacers, vibe, voice mode, music, haptics
 7. **Run Active** → Hands-free running with hype events + haptics
