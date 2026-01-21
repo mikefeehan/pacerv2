@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withDelay,
   Easing,
-  runOnJS,
 } from 'react-native-reanimated';
-import { PacerLogo } from '@/components/PacerLogo';
 import { useAuthStore } from '@/lib/stores';
 
 export default function SplashScreenPage() {
@@ -20,11 +17,9 @@ export default function SplashScreenPage() {
   const [animationComplete, setAnimationComplete] = useState(false);
 
   const logoOpacity = useSharedValue(0);
-  const logoScale = useSharedValue(0.8);
-  const textOpacity = useSharedValue(0);
+  const logoScale = useSharedValue(0.9);
 
   const navigateNext = () => {
-    // Always navigate after animation, don't wait for loading state
     if (user?.stravaConnected && user?.onboardingComplete) {
       router.replace('/home');
     } else if (user?.stravaConnected) {
@@ -35,28 +30,22 @@ export default function SplashScreenPage() {
   };
 
   useEffect(() => {
-    // Hide the native splash screen
     SplashScreen.hideAsync();
 
-    // Animate logo in
-    logoOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
-    logoScale.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.back(1.5)) });
-
-    // Animate text
-    textOpacity.value = withDelay(400, withTiming(1, { duration: 500 }));
+    // Animate logo in with a smooth fade and scale
+    logoOpacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
+    logoScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.2)) });
 
     // Set animation complete after delay
     const timer = setTimeout(() => {
       setAnimationComplete(true);
-    }, 2000);
+    }, 2200);
 
     return () => clearTimeout(timer);
   }, []);
 
-  // Navigate when animation is complete and store is ready (or after timeout)
   useEffect(() => {
     if (animationComplete) {
-      // Navigate even if still loading - the store will hydrate and we can handle it
       navigateNext();
     }
   }, [animationComplete, isLoading]);
@@ -66,29 +55,14 @@ export default function SplashScreenPage() {
     transform: [{ scale: logoScale.value }],
   }));
 
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
   return (
-    <View className="flex-1 bg-pacer-bg items-center justify-center">
-      {/* Animated Logo */}
+    <View className="flex-1 bg-black items-center justify-center">
       <Animated.View style={logoAnimatedStyle}>
-        <PacerLogo size={120} animated intensity="idle" />
-      </Animated.View>
-
-      {/* Brand Name */}
-      <Animated.View style={textAnimatedStyle} className="mt-8">
-        <Text className="text-4xl font-bold text-pacer-white tracking-widest">
-          PACER
-        </Text>
-      </Animated.View>
-
-      {/* Subtle tagline */}
-      <Animated.View style={textAnimatedStyle} className="mt-3">
-        <Text className="text-sm text-pacer-muted">
-          Take your friends on a run with you
-        </Text>
+        <Image
+          source={require('../../public/image-1768984637.png')}
+          style={{ width: 280, height: 360 }}
+          resizeMode="contain"
+        />
       </Animated.View>
     </View>
   );
