@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { RunSession, RunStats, HypeEvent, TriggerType } from './types';
 
-// Active Run Store (ephemeral)
+// Active Run Store (ephemeral) - MULTI-PACER SUPPORT
 interface ActiveRunState {
   session: RunSession | null;
   stats: RunStats;
@@ -9,6 +9,9 @@ interface ActiveRunState {
   lastHypeEventTime: number | null;
   hypeEventCount: number;
   usedMemoIds: Set<string>;
+  usedTrackIds: Set<string>;
+  // Track which pacer spoke last for rotation
+  lastPacerIndex: number;
 
   // Actions
   startRun: (session: Omit<RunSession, 'id' | 'startTime' | 'hypeEvents' | 'recapTracks'>) => void;
@@ -17,6 +20,8 @@ interface ActiveRunState {
   addHypeEvent: (event: Omit<HypeEvent, 'id'>) => void;
   setIsSimulating: (simulating: boolean) => void;
   markMemoUsed: (memoId: string) => void;
+  markTrackUsed: (trackId: string) => void;
+  getNextPacerIndex: () => number;
   resetRun: () => void;
 }
 
@@ -35,6 +40,8 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
   lastHypeEventTime: null,
   hypeEventCount: 0,
   usedMemoIds: new Set(),
+  usedTrackIds: new Set(),
+  lastPacerIndex: -1,
 
   startRun: (sessionData) => {
     const session: RunSession = {
@@ -50,6 +57,8 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
       lastHypeEventTime: null,
       hypeEventCount: 0,
       usedMemoIds: new Set(),
+      usedTrackIds: new Set(),
+      lastPacerIndex: -1,
     });
   },
 
@@ -84,14 +93,15 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
       id: `hype_${Date.now()}`,
     };
 
-    // Add to recap tracks if track info is present
-    const recapTracks = state.session?.recapTracks || [];
+    // Add to recap tracks if track info is present (max 3)
+    const recapTracks = [...(state.session?.recapTracks || [])];
     if (eventData.trackId && eventData.trackName && eventData.artistName) {
       if (recapTracks.length < 3 && !recapTracks.find(t => t.trackId === eventData.trackId)) {
         recapTracks.push({
           trackId: eventData.trackId,
           trackName: eventData.trackName,
           artistName: eventData.artistName,
+          pacerName: eventData.pacerName,
         });
       }
     }
@@ -115,6 +125,21 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
     return { usedMemoIds: newSet };
   }),
 
+  markTrackUsed: (trackId) => set((state) => {
+    const newSet = new Set(state.usedTrackIds);
+    newSet.add(trackId);
+    return { usedTrackIds: newSet };
+  }),
+
+  // Rotate through pacers evenly
+  getNextPacerIndex: () => {
+    const state = get();
+    const pacerCount = state.session?.pacerUserIds.length || 1;
+    const nextIndex = (state.lastPacerIndex + 1) % pacerCount;
+    set({ lastPacerIndex: nextIndex });
+    return nextIndex;
+  },
+
   resetRun: () => set({
     session: null,
     stats: initialStats,
@@ -122,6 +147,8 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
     lastHypeEventTime: null,
     hypeEventCount: 0,
     usedMemoIds: new Set(),
+    usedTrackIds: new Set(),
+    lastPacerIndex: -1,
   }),
 }));
 
@@ -143,12 +170,8 @@ export const STRUGGLE_CONFIG = {
   STALL_DURATION_SECONDS: 90,
   STALL_MIN_DISTANCE: 2, // After mile 2
 
-  // Cooldown between hype events (by intensity)
-  COOLDOWN_BY_INTENSITY: {
-    low: 240, // 4 minutes
-    medium: 180, // 3 minutes
-    high: 120, // 2 minutes
-  },
+  // Cooldown between hype events - 180 seconds fixed
+  COOLDOWN_SECONDS: 180,
 
   // Max events per run
   MAX_EVENTS: 6,
@@ -159,11 +182,10 @@ export function checkForStruggle(
   baselinePace: number,
   lastHypeTime: number | null,
   hypeCount: number,
-  intensity: 'low' | 'medium' | 'high',
   estimatedTotalDuration?: number
 ): TriggerType | null {
   const now = Date.now();
-  const cooldownMs = STRUGGLE_CONFIG.COOLDOWN_BY_INTENSITY[intensity] * 1000;
+  const cooldownMs = STRUGGLE_CONFIG.COOLDOWN_SECONDS * 1000;
 
   // Check if on cooldown
   if (lastHypeTime && now - lastHypeTime < cooldownMs) {

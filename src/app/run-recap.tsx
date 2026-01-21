@@ -11,7 +11,7 @@ import { useActiveRunStore } from '@/lib/run-store';
 import { useAppSettingsStore } from '@/lib/stores';
 import * as Haptics from 'expo-haptics';
 
-const TONE_LABELS: Record<string, string> = {
+const VIBE_LABELS: Record<string, string> = {
   cheerful: 'Cheerful',
   fired_up: 'Fired Up',
   angry: 'Angry',
@@ -27,8 +27,8 @@ export default function RunRecapScreen() {
 
   const hypeEventCount = session?.hypeEvents.length || 0;
   const recapTracks = session?.recapTracks || [];
-  const toneName = session?.tone ? TONE_LABELS[session.tone] : 'Mixed';
-  const pacerName = session?.pacerName || 'Your Pacer';
+  const vibeName = session?.vibe ? VIBE_LABELS[session.vibe] : 'Mixed';
+  const pacerNames = session?.pacerNames?.join(' + ') || 'Your Pacers';
 
   const formatDuration = (minutes?: number) => {
     if (!minutes) return '--:--';
@@ -79,7 +79,7 @@ export default function RunRecapScreen() {
                 You didn't run alone.
               </Text>
               <Text className="text-pacer-muted mt-2">
-                Paced by {pacerName}
+                Paced by {pacerNames}
               </Text>
             </Animated.View>
 
@@ -102,16 +102,16 @@ export default function RunRecapScreen() {
                   </Text>
                 </View>
 
-                {/* Tone */}
+                {/* Vibe */}
                 <View className="flex-1 bg-pacer-surface rounded-2xl p-5">
                   <View className="w-10 h-10 rounded-full bg-pacer-accent/20 items-center justify-center mb-3">
                     <Heart size={20} color="#FF6B35" />
                   </View>
                   <Text className="text-xl font-bold text-pacer-white">
-                    {toneName}
+                    {vibeName}
                   </Text>
                   <Text className="text-pacer-muted text-sm mt-1">
-                    Tone used
+                    Vibe used
                   </Text>
                 </View>
               </View>

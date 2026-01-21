@@ -17,6 +17,7 @@ import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
 import { useAuthStore, usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
+import { VIBES } from '@/lib/types';
 import type { PacerRelationship, PacerStatus } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
 
@@ -103,8 +104,12 @@ function PacerCard({
           </View>
         </View>
 
-        {/* Chevron */}
-        <ChevronRight size={20} color="#6B7280" />
+        {/* Selection indicator */}
+        {isSelected && (
+          <View className="w-6 h-6 rounded-full bg-pacer-accent items-center justify-center">
+            <Check size={14} color="#FFF" />
+          </View>
+        )}
       </View>
 
       {/* Ready indicators */}
@@ -126,20 +131,25 @@ function PacerCard({
 
 export default function HomeScreen() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const pacers = usePacerStore((s) => s.pacers);
-  const selectedPacerId = useRunSettingsStore((s) => s.selectedPacerId);
-  const setSelectedPacer = useRunSettingsStore((s) => s.setSelectedPacer);
+
+  const selectedPacerIds = useRunSettingsStore((s) => s.selectedPacerIds);
+  const togglePacer = useRunSettingsStore((s) => s.togglePacer);
+  const vibe = useRunSettingsStore((s) => s.vibe);
 
   const readyPacers = pacers.filter((p) => p.status === 'ready');
   const otherPacers = pacers.filter((p) => p.status !== 'ready');
 
-  const selectedPacer = pacers.find((p) => p.pacerUserId === selectedPacerId);
-  const canStartRun = selectedPacer?.status === 'ready';
+  const selectedPacers = pacers.filter((p) => selectedPacerIds.includes(p.pacerUserId));
+  const canStartRun = selectedPacers.length > 0 && selectedPacers.every(p => p.status === 'ready');
 
-  const handleSelectPacer = (pacerUserId: string) => {
+  const vibeConfig = VIBES.find(v => v.type === vibe);
+
+  const handleTogglePacer = (pacerUserId: string) => {
+    const pacer = pacers.find(p => p.pacerUserId === pacerUserId);
+    if (pacer?.status !== 'ready') return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedPacer(pacerUserId);
+    togglePacer(pacerUserId);
   };
 
   const handleStartRun = () => {
@@ -169,40 +179,48 @@ export default function HomeScreen() {
         </Animated.View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Today's Pacer CTA */}
+          {/* Today's Run CTA */}
           <Animated.View
             entering={FadeInDown.delay(100).duration(400)}
             className="px-6 mb-8"
           >
             <View className="bg-gradient-to-br from-pacer-surface to-pacer-bg rounded-3xl p-6 border border-pacer-border">
               <Text className="text-pacer-muted text-sm font-medium uppercase tracking-wide mb-2">
-                Today's Pacer
+                Today's Run
               </Text>
 
-              {selectedPacer ? (
-                <View className="flex-row items-center mb-4">
-                  {selectedPacer.pacerAvatar ? (
-                    <Image
-                      source={{ uri: selectedPacer.pacerAvatar }}
-                      className="w-16 h-16 rounded-full"
-                    />
-                  ) : (
-                    <View className="w-16 h-16 rounded-full bg-pacer-border items-center justify-center">
-                      <User size={28} color="#6B7280" />
-                    </View>
-                  )}
-                  <View className="ml-4">
-                    <Text className="text-2xl font-bold text-pacer-white">
-                      {selectedPacer.pacerName}
-                    </Text>
-                    <Text className="text-pacer-muted">
-                      {selectedPacer.status === 'ready' ? 'Ready to pace you' : 'Not ready yet'}
-                    </Text>
+              {selectedPacers.length > 0 ? (
+                <View className="mb-4">
+                  <View className="flex-row items-center flex-wrap">
+                    {selectedPacers.map((pacer, idx) => (
+                      <View key={pacer.pacerUserId} className="flex-row items-center mr-2 mb-1">
+                        {pacer.pacerAvatar ? (
+                          <Image
+                            source={{ uri: pacer.pacerAvatar }}
+                            className="w-8 h-8 rounded-full"
+                          />
+                        ) : (
+                          <View className="w-8 h-8 rounded-full bg-pacer-border items-center justify-center">
+                            <User size={16} color="#6B7280" />
+                          </View>
+                        )}
+                        {idx < selectedPacers.length - 1 && (
+                          <Text className="text-pacer-muted mx-1">+</Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                  <Text className="text-xl font-bold text-pacer-white mt-2">
+                    {selectedPacers.map(p => p.pacerName).join(' + ')}
+                  </Text>
+                  <View className="flex-row items-center mt-1">
+                    <Text className="text-2xl mr-2">{vibeConfig?.emoji}</Text>
+                    <Text className="text-pacer-accent font-medium">{vibeConfig?.label} Run</Text>
                   </View>
                 </View>
               ) : (
                 <Text className="text-xl font-semibold text-pacer-white mb-4">
-                  Select a pacer below
+                  Select pacers below
                 </Text>
               )}
 
@@ -216,6 +234,12 @@ export default function HomeScreen() {
               >
                 Start PACER
               </Button>
+
+              {selectedPacers.length > 0 && (
+                <Text className="text-pacer-muted text-xs text-center mt-3">
+                  {selectedPacers.length} pacer{selectedPacers.length > 1 ? 's' : ''} selected
+                </Text>
+              )}
             </View>
           </Animated.View>
 
@@ -239,13 +263,17 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
+            <Text className="text-pacer-muted text-sm mb-3">
+              Tap to select (multi-select supported)
+            </Text>
+
             {/* Ready Pacers */}
             {readyPacers.map((pacer, index) => (
               <Animated.View key={pacer.pacerUserId} entering={FadeIn.delay(300 + index * 50)}>
                 <PacerCard
                   pacer={pacer}
-                  onPress={() => handleSelectPacer(pacer.pacerUserId)}
-                  isSelected={selectedPacerId === pacer.pacerUserId}
+                  onPress={() => handleTogglePacer(pacer.pacerUserId)}
+                  isSelected={selectedPacerIds.includes(pacer.pacerUserId)}
                 />
               </Animated.View>
             ))}
@@ -260,8 +288,8 @@ export default function HomeScreen() {
                   <Animated.View key={pacer.pacerUserId} entering={FadeIn.delay(400 + index * 50)}>
                     <PacerCard
                       pacer={pacer}
-                      onPress={() => handleSelectPacer(pacer.pacerUserId)}
-                      isSelected={selectedPacerId === pacer.pacerUserId}
+                      onPress={() => {}}
+                      isSelected={false}
                     />
                   </Animated.View>
                 ))}
@@ -272,16 +300,17 @@ export default function HomeScreen() {
             <View className="mt-8 mb-8">
               <Pressable
                 onPress={() => {
-                  // Set first ready pacer and navigate directly to run
+                  // Set first two ready pacers and navigate directly to run
                   if (readyPacers.length > 0) {
-                    setSelectedPacer(readyPacers[0].pacerUserId);
+                    const demoIds = readyPacers.slice(0, 2).map(p => p.pacerUserId);
+                    useRunSettingsStore.getState().setSelectedPacers(demoIds);
                   }
                   router.push('/pre-run');
                 }}
                 className="bg-pacer-surface/50 border border-dashed border-pacer-border rounded-xl p-4"
               >
                 <Text className="text-pacer-muted text-center text-sm">
-                  🧪 Demo Mode: Start a simulated run
+                  Demo Mode: Start a simulated multi-pacer run
                 </Text>
               </Pressable>
             </View>

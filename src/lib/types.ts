@@ -1,11 +1,28 @@
 // PACER Data Types
 
-export type ToneType = 'cheerful' | 'fired_up' | 'angry' | 'harsh_coach' | 'calm';
+// Vibe = the energy/tone for the entire run
+export type VibeType = 'cheerful' | 'fired_up' | 'angry' | 'harsh_coach' | 'calm';
 export type VoiceMode = 'real_only' | 'ai_only' | 'mix';
 export type IntensityLevel = 'low' | 'medium' | 'high';
 export type TriggerType = 'pace_drop' | 'late_run' | 'stall';
 export type VoiceType = 'real' | 'ai';
 export type PacerStatus = 'invited' | 'accepted' | 'blocked' | 'ready' | 'needs_setup';
+
+// Vibe configuration with descriptions
+export interface VibeConfig {
+  type: VibeType;
+  label: string;
+  emoji: string;
+  description: string;
+}
+
+export const VIBES: VibeConfig[] = [
+  { type: 'cheerful', label: 'Cheerful', emoji: '😊', description: 'Positive, upbeat, supportive' },
+  { type: 'fired_up', label: 'Fired Up', emoji: '🔥', description: 'High energy, intense motivation' },
+  { type: 'angry', label: 'Angry', emoji: '😤', description: 'Challenging, confrontational' },
+  { type: 'harsh_coach', label: 'Harsh Coach', emoji: '🧱', description: 'No excuses, tough love' },
+  { type: 'calm', label: 'Calm', emoji: '😌', description: 'Controlled, steady encouragement' },
+];
 
 export interface User {
   id: string;
@@ -21,7 +38,7 @@ export interface User {
 export interface VoiceMemo {
   id: string;
   url: string;
-  toneTag?: ToneType;
+  vibeTag?: VibeType; // Which vibe this memo is for
   duration: number; // seconds
   name?: string;
   createdAt: string;
@@ -50,6 +67,8 @@ export interface HypeEvent {
   timestamp: string;
   triggerType: TriggerType;
   voiceType: VoiceType;
+  pacerUserId: string; // Which pacer spoke
+  pacerName: string;
   memoId?: string;
   generatedText?: string;
   trackId?: string;
@@ -57,19 +76,20 @@ export interface HypeEvent {
   artistName?: string;
 }
 
+// Multi-pacer run session
 export interface RunSession {
   id: string;
   runnerUserId: string;
-  pacerUserId: string;
-  pacerName: string;
+  // Multi-pacer support
+  pacerUserIds: string[];
+  pacerNames: string[];
   voiceMode: VoiceMode;
-  tone: ToneType;
-  intensity: IntensityLevel;
+  vibe: VibeType; // Single vibe for the entire run
   musicEnabled: boolean;
   startTime: string;
   endTime?: string;
   hypeEvents: HypeEvent[];
-  recapTracks: { trackId: string; trackName: string; artistName: string }[];
+  recapTracks: { trackId: string; trackName: string; artistName: string; pacerName: string }[];
   stravaActivityId?: string;
   totalDistance?: number; // miles
   totalDuration?: number; // minutes

@@ -8,7 +8,7 @@ import { Button } from '@/components/Button';
 import { useActiveRunStore } from '@/lib/run-store';
 import * as Haptics from 'expo-haptics';
 
-const TONE_LABELS: Record<string, string> = {
+const VIBE_LABELS: Record<string, string> = {
   cheerful: 'Cheerful',
   fired_up: 'Fired Up',
   angry: 'Angry',
@@ -21,13 +21,13 @@ export default function StravaPostScreen() {
   const session = useActiveRunStore((s) => s.session);
   const resetRun = useActiveRunStore((s) => s.resetRun);
 
-  const pacerName = session?.pacerName || 'a friend';
-  const toneName = session?.tone ? TONE_LABELS[session.tone] : 'Mixed';
+  const pacerNames = session?.pacerNames?.join(' + ') || 'friends';
+  const vibeName = session?.vibe ? VIBE_LABELS[session.vibe] : 'Mixed';
   const recapTracks = session?.recapTracks || [];
 
   const generateDescription = () => {
-    let desc = `Run powered by PACER — paced by ${pacerName}.\n`;
-    desc += `Tone: ${toneName}\n`;
+    let desc = `Run powered by PACER — paced by ${pacerNames}.\n`;
+    desc += `Vibe: ${vibeName}\n`;
 
     if (recapTracks.length > 0) {
       desc += `\nSongs that carried me:\n`;

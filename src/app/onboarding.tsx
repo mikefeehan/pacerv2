@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
-  FadeInRight,
-  FadeOutLeft,
   SlideInRight,
   SlideOutLeft,
 } from 'react-native-reanimated';
@@ -19,32 +17,41 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
-  X,
 } from 'lucide-react-native';
 import { Button } from '@/components/Button';
-import { useAuthStore, usePacerStore, useOnboardingStore } from '@/lib/stores';
+import { useAuthStore, usePacerStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
+import { VIBES } from '@/lib/types';
+import type { VoiceMemo, VibeType } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
-import type { VoiceMemo, ToneType } from '@/lib/types';
 
-const TONE_OPTIONS: { value: ToneType; label: string; emoji: string }[] = [
-  { value: 'cheerful', label: 'Cheerful', emoji: '😊' },
-  { value: 'fired_up', label: 'Fired Up', emoji: '🔥' },
-  { value: 'angry', label: 'Angry', emoji: '😤' },
-  { value: 'harsh_coach', label: 'Harsh Coach', emoji: '💪' },
-  { value: 'calm', label: 'Calm', emoji: '😌' },
-];
-
-const MEMO_PROMPTS = [
-  "Let's go! You've got this!",
-  "Push through, you're stronger than this!",
-  "One step at a time, keep moving!",
-  "You trained for this moment!",
-  "No excuses, finish strong!",
-  "This is where champions are made!",
-  "Feel the burn, embrace it!",
-  "You're almost there, don't stop now!",
-];
+const MEMO_PROMPTS: Record<VibeType, string[]> = {
+  cheerful: [
+    "Let's go, you got this!",
+    "You're crushing it!",
+    "Turn it up!",
+  ],
+  fired_up: [
+    "THIS is your moment!",
+    "No stopping now!",
+    "You trained for this!",
+  ],
+  angry: [
+    "You think this is hard? PROVE IT!",
+    "Pain is temporary. MOVE!",
+    "Show me what you're made of!",
+  ],
+  harsh_coach: [
+    "Push mode. No excuses.",
+    "No slowing down now, c'mon!",
+    "Dig deeper. You have more.",
+  ],
+  calm: [
+    "Breathe. One step at a time.",
+    "Stay steady. Trust your training.",
+    "Find your rhythm.",
+  ],
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -53,13 +60,17 @@ export default function OnboardingScreen() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [memos, setMemos] = useState<VoiceMemo[]>([]);
+  const [selectedVibe, setSelectedVibe] = useState<VibeType>('fired_up');
   const [isRecording, setIsRecording] = useState(false);
   const [aiVoiceConsent, setAiVoiceConsent] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
 
-  const minMemosRequired = 5;
+  const minMemosRequired = 3; // Minimum 3 for ONE vibe
   const totalSteps = 3;
+
+  const currentPrompts = MEMO_PROMPTS[selectedVibe];
+  const memosForSelectedVibe = memos.filter(m => m.vibeTag === selectedVibe);
 
   // Simulate recording a memo
   const handleStartRecording = () => {
@@ -69,12 +80,13 @@ export default function OnboardingScreen() {
     // Simulate recording for 3-5 seconds
     const duration = 3 + Math.random() * 2;
     setTimeout(() => {
+      const promptIndex = memosForSelectedVibe.length % currentPrompts.length;
       const newMemo: VoiceMemo = {
         id: `memo_${Date.now()}`,
         url: '',
         duration: Math.round(duration),
-        toneTag: TONE_OPTIONS[Math.floor(Math.random() * TONE_OPTIONS.length)].value,
-        name: MEMO_PROMPTS[memos.length % MEMO_PROMPTS.length],
+        vibeTag: selectedVibe,
+        name: currentPrompts[promptIndex],
         createdAt: new Date().toISOString(),
       };
       setMemos((prev) => [...prev, newMemo]);
@@ -84,7 +96,6 @@ export default function OnboardingScreen() {
   };
 
   const handleStopRecording = () => {
-    // In real app, would stop the actual recording
     setIsRecording(false);
   };
 
@@ -99,7 +110,6 @@ export default function OnboardingScreen() {
       setPlayingMemoId(null);
     } else {
       setPlayingMemoId(id);
-      // Simulate playback duration
       const memo = memos.find((m) => m.id === id);
       if (memo) {
         setTimeout(() => setPlayingMemoId(null), memo.duration * 1000);
@@ -109,7 +119,6 @@ export default function OnboardingScreen() {
 
   const handleConnectSpotify = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Simulate Spotify OAuth
     await new Promise((resolve) => setTimeout(resolve, 1200));
     setSpotifyConnected(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -132,7 +141,6 @@ export default function OnboardingScreen() {
   const handleFinish = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Save pacer profile
     setMyPacerProfile({
       pacerUserId: 'user_1',
       voiceMemos: memos,
@@ -140,16 +148,11 @@ export default function OnboardingScreen() {
       spotifyConnected,
     });
 
-    // Mark onboarding complete
     updateUser({ onboardingComplete: true });
-
-    // Navigate to home
     router.replace('/home');
   };
 
-  const canProceedStep0 = memos.length >= minMemosRequired;
-  const canProceedStep1 = true; // AI consent is optional
-  const canProceedStep2 = true; // Spotify is optional
+  const canProceedStep0 = memosForSelectedVibe.length >= minMemosRequired;
 
   const renderStep0 = () => (
     <Animated.View
@@ -158,44 +161,84 @@ export default function OnboardingScreen() {
       className="flex-1"
     >
       {/* Header */}
-      <View className="mb-6">
+      <View className="mb-4">
         <Text className="text-2xl font-bold text-pacer-white">
           Record Voice Memos
         </Text>
         <Text className="text-pacer-muted mt-2 leading-6">
-          Record at least {minMemosRequired} motivational messages. These will play when someone you pace is struggling.
+          Record at least {minMemosRequired} phrases for a vibe. These play when someone you pace is struggling.
         </Text>
       </View>
 
+      {/* Vibe Selection */}
+      <View className="mb-4">
+        <Text className="text-pacer-muted text-sm font-medium mb-2">
+          Select a Vibe to record for:
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="-mx-6 px-6"
+          style={{ flexGrow: 0 }}
+        >
+          {VIBES.map((v) => {
+            const count = memos.filter(m => m.vibeTag === v.type).length;
+            return (
+              <Pressable
+                key={v.type}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedVibe(v.type);
+                }}
+                className={cn(
+                  'px-4 py-2 rounded-xl mr-2 border',
+                  selectedVibe === v.type
+                    ? 'bg-pacer-accent/20 border-pacer-accent'
+                    : 'bg-pacer-surface border-transparent'
+                )}
+              >
+                <Text className="text-xl text-center">{v.emoji}</Text>
+                <Text className="text-pacer-white text-xs mt-1">{v.label}</Text>
+                {count > 0 && (
+                  <Text className="text-pacer-accent text-xs text-center">{count} rec</Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* Progress */}
-      <View className="bg-pacer-surface rounded-xl p-4 mb-6">
+      <View className="bg-pacer-surface rounded-xl p-4 mb-4">
         <View className="flex-row items-center justify-between mb-2">
-          <Text className="text-pacer-muted text-sm">Progress</Text>
+          <Text className="text-pacer-muted text-sm">
+            {VIBES.find(v => v.type === selectedVibe)?.label} Progress
+          </Text>
           <Text className="text-pacer-white font-semibold">
-            {memos.length} / {minMemosRequired}
+            {memosForSelectedVibe.length} / {minMemosRequired}
           </Text>
         </View>
         <View className="h-2 bg-pacer-border rounded-full overflow-hidden">
           <View
             className="h-full bg-pacer-accent rounded-full"
-            style={{ width: `${Math.min((memos.length / minMemosRequired) * 100, 100)}%` }}
+            style={{ width: `${Math.min((memosForSelectedVibe.length / minMemosRequired) * 100, 100)}%` }}
           />
         </View>
       </View>
 
       {/* Prompt suggestion */}
-      {memos.length < MEMO_PROMPTS.length && (
+      {memosForSelectedVibe.length < currentPrompts.length && (
         <View className="bg-pacer-accent/10 border border-pacer-accent/30 rounded-xl p-4 mb-4">
           <Text className="text-pacer-accent text-sm font-medium">Try saying:</Text>
           <Text className="text-pacer-white mt-1">
-            "{MEMO_PROMPTS[memos.length]}"
+            "{currentPrompts[memosForSelectedVibe.length % currentPrompts.length]}"
           </Text>
         </View>
       )}
 
       {/* Memos List */}
       <ScrollView className="flex-1 -mx-6 px-6" showsVerticalScrollIndicator={false}>
-        {memos.map((memo, index) => (
+        {memosForSelectedVibe.map((memo, index) => (
           <Animated.View
             key={memo.id}
             entering={FadeIn.delay(index * 50)}
@@ -217,7 +260,7 @@ export default function OnboardingScreen() {
                 {memo.name}
               </Text>
               <Text className="text-pacer-muted text-sm">
-                {memo.duration}s • {TONE_OPTIONS.find((t) => t.value === memo.toneTag)?.label}
+                {memo.duration}s
               </Text>
             </View>
 
@@ -266,7 +309,6 @@ export default function OnboardingScreen() {
       exiting={SlideOutLeft.duration(300)}
       className="flex-1"
     >
-      {/* Header */}
       <View className="mb-8">
         <Text className="text-2xl font-bold text-pacer-white">
           AI Voice
@@ -276,7 +318,6 @@ export default function OnboardingScreen() {
         </Text>
       </View>
 
-      {/* AI Voice Card */}
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -310,18 +351,9 @@ export default function OnboardingScreen() {
         </View>
       </Pressable>
 
-      {/* Info Box */}
       <View className="bg-pacer-surface/50 rounded-xl p-4 mt-6">
         <Text className="text-pacer-muted text-sm leading-5">
-          You control this setting and can disable it anytime. AI-generated lines are short (1-2 sentences) and match the tone selected by the runner.
-        </Text>
-      </View>
-
-      {/* Privacy Note */}
-      <View className="flex-row items-center mt-6 px-2">
-        <View className="w-2 h-2 rounded-full bg-pacer-success mr-3" />
-        <Text className="text-pacer-muted text-sm flex-1">
-          Your voice data stays private and is only used to help friends you approve.
+          You control this setting and can disable it anytime. AI-generated lines are short (1-2 sentences) and match the vibe selected by the runner.
         </Text>
       </View>
     </Animated.View>
@@ -333,7 +365,6 @@ export default function OnboardingScreen() {
       exiting={SlideOutLeft.duration(300)}
       className="flex-1"
     >
-      {/* Header */}
       <View className="mb-8">
         <Text className="text-2xl font-bold text-pacer-white">
           Connect Music
@@ -343,7 +374,6 @@ export default function OnboardingScreen() {
         </Text>
       </View>
 
-      {/* Spotify Card */}
       <Pressable
         onPress={spotifyConnected ? undefined : handleConnectSpotify}
         disabled={spotifyConnected}
@@ -381,24 +411,11 @@ export default function OnboardingScreen() {
         </View>
       </Pressable>
 
-      {/* Skip option */}
       {!spotifyConnected && (
         <Text className="text-pacer-muted text-sm text-center mt-6">
           You can skip this and use PACER's default mix instead
         </Text>
       )}
-
-      {/* What we access */}
-      <View className="bg-pacer-surface/50 rounded-xl p-4 mt-8">
-        <Text className="text-pacer-muted text-sm font-medium mb-3">
-          What we'll access:
-        </Text>
-        <View className="gap-y-2">
-          <Text className="text-pacer-muted text-sm">• Your top tracks and liked songs</Text>
-          <Text className="text-pacer-muted text-sm">• Workout playlists</Text>
-          <Text className="text-pacer-muted text-sm">• Basic playback (with your permission)</Text>
-        </View>
-      </View>
     </Animated.View>
   );
 

@@ -6,7 +6,7 @@ import type {
   PacerProfile,
   PacerRelationship,
   AppSettings,
-  ToneType,
+  VibeType,
   VoiceMode,
   IntensityLevel
 } from './types';
@@ -45,14 +45,12 @@ export const useAuthStore = create<AuthState>()(
 interface PacerState {
   myPacerProfile: PacerProfile | null;
   pacers: PacerRelationship[];
-  selectedPacerId: string | null;
   setMyPacerProfile: (profile: PacerProfile | null) => void;
   updateMyPacerProfile: (updates: Partial<PacerProfile>) => void;
   setPacers: (pacers: PacerRelationship[]) => void;
   addPacer: (pacer: PacerRelationship) => void;
   updatePacer: (pacerUserId: string, updates: Partial<PacerRelationship>) => void;
   removePacer: (pacerUserId: string) => void;
-  setSelectedPacerId: (id: string | null) => void;
 }
 
 export const usePacerStore = create<PacerState>()(
@@ -60,7 +58,6 @@ export const usePacerStore = create<PacerState>()(
     (set) => ({
       myPacerProfile: null,
       pacers: [],
-      selectedPacerId: null,
       setMyPacerProfile: (profile) => set({ myPacerProfile: profile }),
       updateMyPacerProfile: (updates) => set((state) => ({
         myPacerProfile: state.myPacerProfile
@@ -79,7 +76,6 @@ export const usePacerStore = create<PacerState>()(
       removePacer: (pacerUserId) => set((state) => ({
         pacers: state.pacers.filter((p) => p.pacerUserId !== pacerUserId)
       })),
-      setSelectedPacerId: (id) => set({ selectedPacerId: id }),
     }),
     {
       name: 'pacer-pacers',
@@ -88,26 +84,25 @@ export const usePacerStore = create<PacerState>()(
   )
 );
 
-// Run Settings Store (pre-run configuration)
+// Run Settings Store (pre-run configuration) - MULTI-PACER SUPPORT
 interface RunSettingsState {
-  selectedPacerId: string | null;
+  selectedPacerIds: string[]; // Multi-pacer selection
   voiceMode: VoiceMode;
-  tone: ToneType;
-  intensity: IntensityLevel;
+  vibe: VibeType; // Single vibe for entire run
   musicEnabled: boolean;
-  setSelectedPacer: (id: string | null) => void;
+  // Actions
+  togglePacer: (id: string) => void;
+  setSelectedPacers: (ids: string[]) => void;
   setVoiceMode: (mode: VoiceMode) => void;
-  setTone: (tone: ToneType) => void;
-  setIntensity: (intensity: IntensityLevel) => void;
+  setVibe: (vibe: VibeType) => void;
   setMusicEnabled: (enabled: boolean) => void;
   resetSettings: () => void;
 }
 
 const defaultRunSettings = {
-  selectedPacerId: null,
+  selectedPacerIds: [] as string[],
   voiceMode: 'mix' as VoiceMode,
-  tone: 'fired_up' as ToneType,
-  intensity: 'medium' as IntensityLevel,
+  vibe: 'fired_up' as VibeType,
   musicEnabled: true,
 };
 
@@ -115,10 +110,17 @@ export const useRunSettingsStore = create<RunSettingsState>()(
   persist(
     (set) => ({
       ...defaultRunSettings,
-      setSelectedPacer: (id) => set({ selectedPacerId: id }),
+      togglePacer: (id) => set((state) => {
+        const isSelected = state.selectedPacerIds.includes(id);
+        if (isSelected) {
+          return { selectedPacerIds: state.selectedPacerIds.filter(p => p !== id) };
+        } else {
+          return { selectedPacerIds: [...state.selectedPacerIds, id] };
+        }
+      }),
+      setSelectedPacers: (ids) => set({ selectedPacerIds: ids }),
       setVoiceMode: (mode) => set({ voiceMode: mode }),
-      setTone: (tone) => set({ tone }),
-      setIntensity: (intensity) => set({ intensity }),
+      setVibe: (vibe) => set({ vibe }),
       setMusicEnabled: (enabled) => set({ musicEnabled: enabled }),
       resetSettings: () => set(defaultRunSettings),
     }),
