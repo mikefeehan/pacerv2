@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -20,45 +19,36 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-pacer-bg">
-      <LinearGradient
-        colors={['#0A0A0B', '#1A1A1F', '#0A0A0B']}
-        style={{ flex: 1 }}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
-        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-          <View className="flex-1 px-6 justify-between py-8">
-            {/* Top Section - Logo & Tagline */}
-            <Animated.View
-              entering={FadeIn.delay(200).duration(600)}
-              className="items-center pt-12"
-            >
-              <Image
-                source={require('../../public/image-1768984637.png')}
-                style={{ width: 200, height: 260 }}
-                resizeMode="contain"
-              />
-            </Animated.View>
+    <View className="flex-1 bg-black">
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <View className="flex-1 px-6 justify-between py-8">
+          {/* Top Section - Logo */}
+          <Animated.View
+            entering={FadeIn.delay(200).duration(600)}
+            className="items-center flex-1 justify-center"
+          >
+            <Image
+              source={require('../../public/image-1768984637.png')}
+              style={{ width: 240, height: 300 }}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-            {/* Middle Section - Main Copy */}
-            <Animated.View
-              entering={FadeInUp.delay(400).duration(600)}
-              className="items-center"
-            >
+          {/* Bottom Section - Copy & CTAs */}
+          <Animated.View
+            entering={FadeInUp.delay(400).duration(600)}
+            className="gap-y-6"
+          >
+            <View className="items-center">
               <Text className="text-2xl font-semibold text-pacer-white text-center leading-9">
                 Take your friends{'\n'}on a run with you.
               </Text>
               <Text className="text-base text-pacer-muted text-center mt-4 px-4 leading-6">
                 PACER plays voice and music from someone you choose when your run gets tough.
               </Text>
-            </Animated.View>
+            </View>
 
-            {/* Bottom Section - CTAs */}
-            <Animated.View
-              entering={FadeInDown.delay(600).duration(600)}
-              className="gap-y-4"
-            >
+            <View className="gap-y-4 pt-4">
               <Button
                 onPress={handleConnectStrava}
                 variant="primary"
@@ -77,10 +67,10 @@ export default function WelcomeScreen() {
                   How it works
                 </Text>
               </Pressable>
-            </Animated.View>
-          </View>
-        </SafeAreaView>
-      </LinearGradient>
+            </View>
+          </Animated.View>
+        </View>
+      </SafeAreaView>
 
       {/* How It Works Modal */}
       <Modal
