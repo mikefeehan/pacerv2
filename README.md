@@ -8,6 +8,7 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 
 - **Strava Integration**: Connect your Strava account to track runs
 - **Pacer System**: Invite friends to become your Pacers
+- **Public Pacers**: Discover and add verified/curated public pacers
 - **Multi-Pacer Support**: Select multiple pacers per run (e.g., "Ashley + Kevin")
 - **Vibe System**: Choose a single vibe (tone) for the entire run
 - **Voice Memos**: Record motivational messages for friends
@@ -16,6 +17,20 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 - **Struggle Detection**: Automatic detection of when you need a boost
 - **Hype Events**: Voice + music triggered during tough moments
 - **Haptic Feedback**: Vibe-specific haptic patterns during hype moments
+
+## Public Pacers
+
+Discover curated pacers from around the world. Public Pacers share their energy, not personal info:
+
+| Category | Description |
+|----------|-------------|
+| Celebrity & Verified | Famous voices to pace you |
+| Top Fired Up | High energy motivation |
+| Best Harsh Coach | No excuses, tough love |
+| Best Calm | Perfect for long runs |
+| Music-First | Great playlists for runners |
+
+**Privacy**: Public Pacers cannot see who uses their content or receive messages from runners.
 
 ## Vibes
 
@@ -62,6 +77,9 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 | Strava Post | `/strava-post` | Editable post preview |
 | Settings | `/settings` | App preferences |
 | Invite Pacer | `/invite-pacer` | Invite friends |
+| Public Pacers | `/public-pacers` | Discover public pacers |
+| Public Pacer Profile | `/public-pacer-profile` | View pacer details |
+| Category View | `/public-pacers-category` | Browse category |
 
 ## Tech Stack
 
@@ -82,6 +100,7 @@ The app includes a simulated 25-minute run with struggle moments for demonstrati
 - **User**: Authentication and Strava connection
 - **PacerProfile**: Voice memos, AI consent, music settings
 - **PacerRelationship**: Connection between runner and pacer
+- **PublicPacer**: Public pacer profile with aggregate stats
 - **RunSession**: Active/completed run data (supports multi-pacer)
 - **HypeEvent**: Individual trigger events with pacer attribution
 - **HapticSettings**: Haptic feedback configuration

@@ -110,3 +110,58 @@ export interface AppSettings {
   hypeFrequency: IntensityLevel;
   showStravaPostPreview: boolean;
 }
+
+// Public Pacer Types
+export type PublicPacerCategory =
+  | 'top_fired_up'
+  | 'best_harsh_coach'
+  | 'best_calm'
+  | 'music_first'
+  | 'celebrity_verified';
+
+export interface PublicPacerCategoryConfig {
+  id: PublicPacerCategory;
+  title: string;
+  subtitle: string;
+  emoji: string;
+}
+
+export const PUBLIC_PACER_CATEGORIES: PublicPacerCategoryConfig[] = [
+  { id: 'celebrity_verified', title: 'Celebrity & Verified', subtitle: 'Famous voices to pace you', emoji: '⭐' },
+  { id: 'top_fired_up', title: 'Top Fired Up Pacers', subtitle: 'High energy motivation', emoji: '🔥' },
+  { id: 'best_harsh_coach', title: 'Best Harsh Coach', subtitle: 'No excuses, tough love', emoji: '🧱' },
+  { id: 'best_calm', title: 'Best Calm Pacers', subtitle: 'Perfect for long runs', emoji: '😌' },
+  { id: 'music_first', title: 'Music-First Pacers', subtitle: 'Great playlists for runners', emoji: '🎵' },
+];
+
+export type MusicStyle = 'hip_hop' | 'edm' | 'pop' | 'rock' | 'indie' | 'r_and_b' | 'classical' | 'mixed';
+
+export interface PublicPacer {
+  id: string;
+  name: string;
+  avatar?: string;
+  isVerified: boolean;
+  // Profile info
+  bio?: string;
+  vibesOffered: VibeType[];
+  musicStyles: MusicStyle[];
+  bestUseCase: string; // e.g., "Best for final mile pushes"
+  // Aggregate stats only (privacy)
+  totalRunsPaced: number;
+  paceRecoveryScore: number; // 0-100, effectiveness metric
+  // Settings
+  aiVoiceEnabled: boolean;
+  // Categories this pacer appears in
+  categories: PublicPacerCategory[];
+}
+
+export const MUSIC_STYLE_LABELS: Record<MusicStyle, string> = {
+  hip_hop: 'Hip Hop',
+  edm: 'EDM',
+  pop: 'Pop',
+  rock: 'Rock',
+  indie: 'Indie',
+  r_and_b: 'R&B',
+  classical: 'Classical',
+  mixed: 'Mixed',
+};

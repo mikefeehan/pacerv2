@@ -12,6 +12,7 @@ import {
   Clock,
   ChevronRight,
   User,
+  Globe,
 } from 'lucide-react-native';
 import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
@@ -252,15 +253,26 @@ export default function HomeScreen() {
               <Text className="text-lg font-semibold text-pacer-white">
                 My Pacers
               </Text>
-              <Pressable
-                onPress={() => router.push('/invite-pacer')}
-                className="flex-row items-center active:opacity-70"
-              >
-                <UserPlus size={18} color="#FF6B35" />
-                <Text className="text-pacer-accent font-medium ml-2">
-                  Invite
-                </Text>
-              </Pressable>
+              <View className="flex-row items-center">
+                <Pressable
+                  onPress={() => router.push('/public-pacers')}
+                  className="flex-row items-center active:opacity-70 mr-4"
+                >
+                  <Globe size={18} color="#3B82F6" />
+                  <Text className="text-blue-400 font-medium ml-2">
+                    Discover
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/invite-pacer')}
+                  className="flex-row items-center active:opacity-70"
+                >
+                  <UserPlus size={18} color="#FF6B35" />
+                  <Text className="text-pacer-accent font-medium ml-2">
+                    Invite
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             <Text className="text-pacer-muted text-sm mb-3">
