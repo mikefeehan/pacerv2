@@ -90,55 +90,57 @@ export function PacerLogo({
         }}
       >
         <Svg width={size} height={size} viewBox="0 0 64 64">
-          {/* Running shoe - sleek modern silhouette */}
+          {/* Motion lines behind shoe */}
           <Path
-            d="M8 42
-               C8 42 10 38 14 36
-               L18 35
-               C20 34 22 33 24 33
-               L28 33
-               C30 32 34 30 38 30
-               L44 30
-               C48 30 52 32 54 34
-               L56 36
-               C58 38 58 40 56 42
-               L54 44
-               C52 46 48 47 44 47
-               L20 47
-               C14 47 10 46 8 44
-               L8 42Z"
+            d="M6 28 L14 28"
+            stroke={primaryColor}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            opacity={0.5}
+          />
+          <Path
+            d="M4 32 L12 32"
+            stroke={primaryColor}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            opacity={0.35}
+          />
+
+          {/* Running shoe - sleek silhouette matching reference */}
+          <Path
+            d="M16 34
+               C18 30 22 26 28 24
+               L36 22
+               C40 21 44 22 48 24
+               L54 28
+               C58 30 60 34 58 36
+               L56 38
+               C54 40 50 40 46 40
+               L20 40
+               C16 40 14 38 16 34Z"
             fill={primaryColor}
           />
-          {/* Shoe detail - swoosh line */}
+          {/* Shoe swoosh detail */}
           <Path
-            d="M16 40 Q28 36 42 38"
+            d="M22 34 Q34 30 48 33"
             stroke="#0A0A0B"
             strokeWidth={2}
             fill="none"
             strokeLinecap="round"
           />
-          {/* Motion lines trailing behind */}
-          <Path
-            d="M4 38 L10 38"
-            stroke={primaryColor}
-            strokeWidth={2}
-            strokeLinecap="round"
-            opacity={0.6}
-          />
-          <Path
-            d="M2 42 L8 42"
-            stroke={primaryColor}
-            strokeWidth={2}
-            strokeLinecap="round"
-            opacity={0.4}
-          />
 
-          {/* Audio waveform above shoe */}
-          <Rect x="20" y="18" width="2.5" height="8" rx="1" fill={primaryColor} />
-          <Rect x="26" y="14" width="2.5" height="12" rx="1" fill={showAccent ? accentColor : primaryColor} />
-          <Rect x="32" y="16" width="2.5" height="10" rx="1" fill={primaryColor} />
-          <Rect x="38" y="12" width="2.5" height="14" rx="1" fill={showAccent ? accentColor : primaryColor} />
-          <Rect x="44" y="17" width="2.5" height="9" rx="1" fill={primaryColor} />
+          {/* Audio waveform underneath shoe - matching reference style */}
+          <Rect x="12" y="46" width="2" height="6" rx="1" fill={primaryColor} opacity={0.7} />
+          <Rect x="16" y="44" width="2" height="10" rx="1" fill={primaryColor} opacity={0.8} />
+          <Rect x="20" y="46" width="2" height="6" rx="1" fill={primaryColor} />
+          <Rect x="24" y="43" width="2" height="12" rx="1" fill={showAccent ? accentColor : primaryColor} />
+          <Rect x="28" y="45" width="2" height="8" rx="1" fill={primaryColor} />
+          <Rect x="32" y="42" width="2" height="14" rx="1" fill={showAccent ? accentColor : primaryColor} />
+          <Rect x="36" y="45" width="2" height="8" rx="1" fill={primaryColor} />
+          <Rect x="40" y="43" width="2" height="12" rx="1" fill={showAccent ? accentColor : primaryColor} />
+          <Rect x="44" y="46" width="2" height="6" rx="1" fill={primaryColor} />
+          <Rect x="48" y="44" width="2" height="10" rx="1" fill={primaryColor} opacity={0.8} />
+          <Rect x="52" y="46" width="2" height="6" rx="1" fill={primaryColor} opacity={0.7} />
         </Svg>
       </View>
     </View>
