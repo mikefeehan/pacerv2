@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,7 +9,6 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { X, Headphones, Zap, Users, ChevronRight } from 'lucide-react-native';
-import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
 
 export default function WelcomeScreen() {
@@ -35,10 +34,11 @@ export default function WelcomeScreen() {
               entering={FadeIn.delay(200).duration(600)}
               className="items-center pt-12"
             >
-              <PacerLogo size={100} animated intensity="idle" />
-              <Text className="text-3xl font-bold text-pacer-white mt-6 text-center">
-                PACER
-              </Text>
+              <Image
+                source={require('../../public/image-1768984637.png')}
+                style={{ width: 200, height: 260 }}
+                resizeMode="contain"
+              />
             </Animated.View>
 
             {/* Middle Section - Main Copy */}
