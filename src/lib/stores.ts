@@ -10,6 +10,8 @@ import type {
   VoiceMode,
   IntensityLevel
 } from './types';
+import type { HapticDeviceMode, HapticSettings } from './haptics';
+import { DEFAULT_HAPTIC_SETTINGS } from './haptics';
 
 // Auth Store
 interface AuthState {
@@ -90,12 +92,15 @@ interface RunSettingsState {
   voiceMode: VoiceMode;
   vibe: VibeType; // Single vibe for entire run
   musicEnabled: boolean;
+  // Haptic settings
+  hapticSettings: HapticSettings;
   // Actions
   togglePacer: (id: string) => void;
   setSelectedPacers: (ids: string[]) => void;
   setVoiceMode: (mode: VoiceMode) => void;
   setVibe: (vibe: VibeType) => void;
   setMusicEnabled: (enabled: boolean) => void;
+  setHapticSettings: (settings: Partial<HapticSettings>) => void;
   resetSettings: () => void;
 }
 
@@ -104,6 +109,7 @@ const defaultRunSettings = {
   voiceMode: 'mix' as VoiceMode,
   vibe: 'fired_up' as VibeType,
   musicEnabled: true,
+  hapticSettings: DEFAULT_HAPTIC_SETTINGS,
 };
 
 export const useRunSettingsStore = create<RunSettingsState>()(
@@ -122,6 +128,9 @@ export const useRunSettingsStore = create<RunSettingsState>()(
       setVoiceMode: (mode) => set({ voiceMode: mode }),
       setVibe: (vibe) => set({ vibe }),
       setMusicEnabled: (enabled) => set({ musicEnabled: enabled }),
+      setHapticSettings: (settings) => set((state) => ({
+        hapticSettings: { ...state.hapticSettings, ...settings }
+      })),
       resetSettings: () => set(defaultRunSettings),
     }),
     {

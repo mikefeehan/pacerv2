@@ -13,18 +13,35 @@ import {
   Play,
   ExternalLink,
   Check,
+  Vibrate,
+  Watch,
+  Smartphone,
 } from 'lucide-react-native';
 import { Button } from '@/components/Button';
 import { usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
 import { VIBES } from '@/lib/types';
-import type { VibeType, VoiceMode } from '@/lib/types';
+import type { VibeType, VoiceMode, IntensityLevel } from '@/lib/types';
+import type { HapticDeviceMode } from '@/lib/haptics';
+import { getHapticPatternDescription } from '@/lib/haptics';
 import * as Haptics from 'expo-haptics';
 
 const VOICE_MODES: { value: VoiceMode; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: 'real_only', label: 'Real Only', icon: <Mic size={18} color="#FAFAFA" />, desc: 'Only recorded memos' },
   { value: 'ai_only', label: 'AI Only', icon: <Sparkles size={18} color="#FAFAFA" />, desc: 'AI-generated lines' },
   { value: 'mix', label: 'Mix', icon: <Shuffle size={18} color="#FAFAFA" />, desc: 'Best of both (default)' },
+];
+
+const HAPTIC_DEVICE_MODES: { value: HapticDeviceMode; label: string; icon: React.ReactNode }[] = [
+  { value: 'off', label: 'Off', icon: null },
+  { value: 'iphone_only', label: 'iPhone', icon: <Smartphone size={16} color="#FAFAFA" /> },
+  { value: 'iphone_watch', label: 'iPhone + Watch', icon: <Watch size={16} color="#FAFAFA" /> },
+];
+
+const HAPTIC_INTENSITY_OPTIONS: { value: IntensityLevel; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
 ];
 
 export default function PreRunScreen() {
@@ -35,11 +52,13 @@ export default function PreRunScreen() {
   const voiceMode = useRunSettingsStore((s) => s.voiceMode);
   const vibe = useRunSettingsStore((s) => s.vibe);
   const musicEnabled = useRunSettingsStore((s) => s.musicEnabled);
+  const hapticSettings = useRunSettingsStore((s) => s.hapticSettings);
 
   const togglePacer = useRunSettingsStore((s) => s.togglePacer);
   const setVoiceMode = useRunSettingsStore((s) => s.setVoiceMode);
   const setVibe = useRunSettingsStore((s) => s.setVibe);
   const setMusicEnabled = useRunSettingsStore((s) => s.setMusicEnabled);
+  const setHapticSettings = useRunSettingsStore((s) => s.setHapticSettings);
 
   const readyPacers = pacers.filter((p) => p.status === 'ready');
   const selectedPacers = pacers.filter((p) => selectedPacerIds.includes(p.pacerUserId));
@@ -270,10 +289,160 @@ export default function PreRunScreen() {
             </Pressable>
           </Animated.View>
 
+          {/* Step 5: Haptics */}
+          <Animated.View
+            entering={FadeInDown.delay(500).duration(300)}
+            className="px-6 mb-8"
+          >
+            <Text className="text-pacer-muted text-sm font-medium uppercase tracking-wide mb-3">
+              Step 5: Haptics
+            </Text>
+
+            {/* Haptics On/Off + Device Mode */}
+            <View className="bg-pacer-surface rounded-2xl overflow-hidden mb-3">
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setHapticSettings({ enabled: !hapticSettings.enabled });
+                }}
+                className="flex-row items-center p-4 border-b border-pacer-border"
+              >
+                <View className="w-10 h-10 rounded-full bg-pacer-accent/30 items-center justify-center mr-3">
+                  <Vibrate size={20} color="#FF6B35" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-pacer-white font-medium">
+                    Haptic Feedback
+                  </Text>
+                  <Text className="text-pacer-muted text-sm">
+                    {hapticSettings.enabled
+                      ? `${getHapticPatternDescription(vibe)} during hype`
+                      : 'Disabled'}
+                  </Text>
+                </View>
+                <View
+                  className={cn(
+                    'w-12 h-7 rounded-full p-1',
+                    hapticSettings.enabled ? 'bg-pacer-accent' : 'bg-pacer-border'
+                  )}
+                >
+                  <View
+                    className={cn(
+                      'w-5 h-5 rounded-full bg-white',
+                      hapticSettings.enabled ? 'ml-auto' : ''
+                    )}
+                  />
+                </View>
+              </Pressable>
+
+              {/* Device Mode Selector (only if enabled) */}
+              {hapticSettings.enabled && (
+                <View className="p-4 border-b border-pacer-border">
+                  <Text className="text-pacer-muted text-xs mb-2">Device</Text>
+                  <View className="flex-row">
+                    {HAPTIC_DEVICE_MODES.filter(m => m.value !== 'off').map((mode) => (
+                      <Pressable
+                        key={mode.value}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setHapticSettings({ deviceMode: mode.value });
+                        }}
+                        className={cn(
+                          'flex-1 flex-row items-center justify-center py-2 px-3 rounded-lg mr-2 last:mr-0',
+                          hapticSettings.deviceMode === mode.value
+                            ? 'bg-pacer-accent/20'
+                            : 'bg-pacer-border/50'
+                        )}
+                      >
+                        {mode.icon}
+                        <Text
+                          className={cn(
+                            'text-sm font-medium ml-1',
+                            hapticSettings.deviceMode === mode.value
+                              ? 'text-pacer-accent'
+                              : 'text-pacer-muted'
+                          )}
+                        >
+                          {mode.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Intensity Selector (only if enabled) */}
+              {hapticSettings.enabled && (
+                <View className="p-4 border-b border-pacer-border">
+                  <Text className="text-pacer-muted text-xs mb-2">Intensity</Text>
+                  <View className="flex-row">
+                    {HAPTIC_INTENSITY_OPTIONS.map((option) => (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setHapticSettings({ intensity: option.value });
+                        }}
+                        className={cn(
+                          'flex-1 py-2 px-3 rounded-lg mr-2 last:mr-0 items-center',
+                          hapticSettings.intensity === option.value
+                            ? 'bg-pacer-accent/20'
+                            : 'bg-pacer-border/50'
+                        )}
+                      >
+                        <Text
+                          className={cn(
+                            'text-sm font-medium',
+                            hapticSettings.intensity === option.value
+                              ? 'text-pacer-accent'
+                              : 'text-pacer-muted'
+                          )}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Beat Push Toggle (only if enabled) */}
+              {hapticSettings.enabled && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setHapticSettings({ beatPushEnabled: !hapticSettings.beatPushEnabled });
+                  }}
+                  className="flex-row items-center justify-between p-4"
+                >
+                  <View className="flex-1">
+                    <Text className="text-pacer-white font-medium">Beat Push</Text>
+                    <Text className="text-pacer-muted text-xs">
+                      Rhythm pulses after hype moment
+                    </Text>
+                  </View>
+                  <View
+                    className={cn(
+                      'w-12 h-7 rounded-full p-1',
+                      hapticSettings.beatPushEnabled ? 'bg-pacer-accent' : 'bg-pacer-border'
+                    )}
+                  >
+                    <View
+                      className={cn(
+                        'w-5 h-5 rounded-full bg-white',
+                        hapticSettings.beatPushEnabled ? 'ml-auto' : ''
+                      )}
+                    />
+                  </View>
+                </Pressable>
+              )}
+            </View>
+          </Animated.View>
+
           {/* Run Preview */}
           {selectedPacers.length > 0 && (
             <Animated.View
-              entering={FadeInDown.delay(500).duration(300)}
+              entering={FadeInDown.delay(600).duration(300)}
               className="px-6 mb-8"
             >
               <View className="bg-pacer-surface rounded-2xl p-4">

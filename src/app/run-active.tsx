@@ -11,7 +11,7 @@ import Animated, {
   Easing,
   FadeIn,
 } from 'react-native-reanimated';
-import { Square, Volume2 } from 'lucide-react-native';
+import { Square, Volume2, Vibrate } from 'lucide-react-native';
 import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
 import { usePacerStore, useRunSettingsStore } from '@/lib/stores';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/mock-data';
 import { VIBES } from '@/lib/types';
 import type { TriggerType, VoiceMemo } from '@/lib/types';
+import { triggerHypeHaptics, stopHaptics, getHapticPatternDescription } from '@/lib/haptics';
 import * as Haptics from 'expo-haptics';
 
 export default function RunActiveScreen() {
@@ -34,6 +35,7 @@ export default function RunActiveScreen() {
   const voiceMode = useRunSettingsStore((s) => s.voiceMode);
   const vibe = useRunSettingsStore((s) => s.vibe);
   const musicEnabled = useRunSettingsStore((s) => s.musicEnabled);
+  const hapticSettings = useRunSettingsStore((s) => s.hapticSettings);
 
   const startRun = useActiveRunStore((s) => s.startRun);
   const endRun = useActiveRunStore((s) => s.endRun);
@@ -57,6 +59,7 @@ export default function RunActiveScreen() {
   const [hypeMessage, setHypeMessage] = useState('');
   const [currentPacerName, setCurrentPacerName] = useState('');
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [hapticsActive, setHapticsActive] = useState(false);
 
   const simulationIndexRef = useRef(0);
   const usedLinesRef = useRef(new Set<string>());
@@ -132,7 +135,7 @@ export default function RunActiveScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  const triggerHypeEvent = (triggerType: TriggerType) => {
+  const triggerHypeEvent = async (triggerType: TriggerType) => {
     // Check cooldown and max events
     const now = Date.now();
     const cooldownMs = STRUGGLE_CONFIG.COOLDOWN_SECONDS * 1000;
@@ -145,6 +148,16 @@ export default function RunActiveScreen() {
       return;
     }
 
+    // Trigger haptics 0.2s BEFORE voice (as per spec)
+    if (hapticSettings.enabled) {
+      setHapticsActive(true);
+      // Small delay then trigger haptics
+      setTimeout(() => {
+        triggerHypeHaptics(vibe, hapticSettings);
+      }, 200);
+    }
+
+    // Basic notification haptic as backup
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     // Select next pacer (rotate evenly)
@@ -226,13 +239,17 @@ export default function RunActiveScreen() {
     setHypeMessage(generatedText || "You've got this!");
     setShowHypeOverlay(true);
 
-    // Hide overlay after a few seconds
+    // Hide overlay after a few seconds and stop haptics
     setTimeout(() => {
       setShowHypeOverlay(false);
+      setHapticsActive(false);
+      stopHaptics();
     }, 4000);
   };
 
   const handleEndRun = () => {
+    // Clean up haptics on run end
+    stopHaptics();
     const completedSession = endRun();
     if (completedSession) {
       router.replace('/run-recap');
@@ -342,6 +359,16 @@ export default function RunActiveScreen() {
             <Text className="text-white text-2xl font-bold text-center leading-9">
               "{hypeMessage}"
             </Text>
+
+            {/* Haptics Indicator */}
+            {hapticsActive && hapticSettings.enabled && (
+              <View className="flex-row items-center mt-6 bg-white/10 px-4 py-2 rounded-full">
+                <Vibrate size={16} color="#FF6B35" />
+                <Text className="text-pacer-accent text-sm ml-2">
+                  Haptics: {getHapticPatternDescription(vibe)}
+                </Text>
+              </View>
+            )}
           </Animated.View>
         </View>
       </Modal>
