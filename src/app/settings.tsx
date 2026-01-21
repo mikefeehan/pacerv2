@@ -14,7 +14,7 @@ import {
   LogOut,
   Check,
 } from 'lucide-react-native';
-import { useAuthStore, useAppSettingsStore, usePacerStore } from '@/lib/stores';
+import { useAuthStore, useAppSettingsStore, usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
 import * as Haptics from 'expo-haptics';
 import type { IntensityLevel } from '@/lib/types';
@@ -46,6 +46,9 @@ export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const myPacerProfile = usePacerStore((s) => s.myPacerProfile);
+  const setPacers = usePacerStore((s) => s.setPacers);
+  const setMyPacerProfile = usePacerStore((s) => s.setMyPacerProfile);
+  const resetRunSettings = useRunSettingsStore((s) => s.resetSettings);
 
   const playbackMode = useAppSettingsStore((s) => s.playbackMode);
   const duckAmount = useAppSettingsStore((s) => s.duckAmount);
@@ -60,14 +63,18 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out?',
+      'Are you sure you want to sign out? This will reset all your data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: () => {
+            // Clear all stores
             logout();
+            setPacers([]);
+            setMyPacerProfile(null);
+            resetRunSettings();
             router.replace('/welcome');
           },
         },
