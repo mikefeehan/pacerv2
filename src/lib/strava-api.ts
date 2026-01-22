@@ -7,8 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// For Expo with auth.expo.io callback domain, use this format
-const STRAVA_REDIRECT_URI = 'https://auth.expo.io/@vibecode/pacer/callback';
+// Redirect URI for Expo OAuth with auth.expo.io
+const STRAVA_REDIRECT_URI = 'https://auth.expo.io/@vibecode/pacer';
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
