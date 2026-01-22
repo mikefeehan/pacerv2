@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Modal, Alert } from 'react-native';
+import { View, Text, Pressable, Modal, Alert, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -11,6 +11,7 @@ import Animated, {
   Easing,
   FadeIn,
 } from 'react-native-reanimated';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Square, Volume2, Vibrate, MapPin } from 'lucide-react-native';
 import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
@@ -38,6 +39,8 @@ import {
 } from '@/lib/gps-tracking';
 import type * as Location from 'expo-location';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function RunActiveScreen() {
   const router = useRouter();
 
@@ -62,7 +65,6 @@ export default function RunActiveScreen() {
   const getNextPacerIndex = useActiveRunStore((s) => s.getNextPacerIndex);
   const addGPSPoint = useActiveRunStore((s) => s.addGPSPoint);
   const setIsTrackingGPS = useActiveRunStore((s) => s.setIsTrackingGPS);
-  const gpsPoints = useActiveRunStore((s) => s.gpsPoints);
 
   const selectedPacers = pacers.filter((p) => selectedPacerIds.includes(p.pacerUserId));
   const pacerNames = selectedPacers.map(p => p.pacerName).join(' + ');
@@ -75,11 +77,19 @@ export default function RunActiveScreen() {
   const [hapticsActive, setHapticsActive] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<'requesting' | 'tracking' | 'error'>('requesting');
 
+  // Local state for current position and route
+  const [currentPosition, setCurrentPosition] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
+
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const usedLinesRef = useRef(new Set<string>());
   const baselinePaceRef = useRef(0);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mapRef = useRef<MapView | null>(null);
+
+  // Keep local copy of GPS points for accurate distance calculation
+  const localGpsPointsRef = useRef<GPSPoint[]>([]);
 
   // Pulsing animation
   const pulseScale = useSharedValue(1);
@@ -154,7 +164,6 @@ export default function RunActiveScreen() {
 
     try {
       const subscription = await startLocationTracking((point: GPSPoint) => {
-        addGPSPoint(point);
         updateStatsFromGPS(point);
       });
 
@@ -168,7 +177,16 @@ export default function RunActiveScreen() {
   };
 
   const updateStatsFromGPS = (newPoint: GPSPoint) => {
-    const points = [...gpsPoints, newPoint];
+    // Add to local ref for accurate calculation
+    localGpsPointsRef.current = [...localGpsPointsRef.current, newPoint];
+    const points = localGpsPointsRef.current;
+
+    // Update route coordinates for map
+    setRouteCoordinates(points.map(p => ({ latitude: p.latitude, longitude: p.longitude })));
+    setCurrentPosition({ latitude: newPoint.latitude, longitude: newPoint.longitude });
+
+    // Add to store
+    addGPSPoint(newPoint);
 
     // Calculate distance from all GPS points
     const totalDistance = calculateTotalDistance(points);
@@ -193,6 +211,9 @@ export default function RunActiveScreen() {
 
     // Check for struggle triggers
     checkForStruggles(elapsed, totalDistance, rollingPace);
+
+    // Log for debugging
+    console.log(`GPS Update: ${points.length} points, ${totalDistance.toFixed(3)} mi, pace: ${currentPace?.toFixed(1) || '--'}`);
   };
 
   const checkForStruggles = (elapsed: number, distance: number, rollingPace: number) => {
@@ -390,6 +411,42 @@ export default function RunActiveScreen() {
               {gpsStatus === 'tracking' ? 'GPS Active' : gpsStatus === 'requesting' ? 'Connecting...' : 'No GPS'}
             </Text>
           </View>
+
+          {/* Live Map */}
+          {currentPosition && (
+            <View className="mt-4 rounded-2xl overflow-hidden" style={{ width: SCREEN_WIDTH - 48, height: 180 }}>
+              <MapView
+                ref={mapRef}
+                style={{ flex: 1 }}
+                region={{
+                  latitude: currentPosition.latitude,
+                  longitude: currentPosition.longitude,
+                  latitudeDelta: 0.005,
+                  longitudeDelta: 0.005,
+                }}
+                showsUserLocation={false}
+                followsUserLocation={false}
+                scrollEnabled={false}
+                zoomEnabled={false}
+                rotateEnabled={false}
+                pitchEnabled={false}
+              >
+                {routeCoordinates.length > 1 && (
+                  <Polyline
+                    coordinates={routeCoordinates}
+                    strokeColor="#FF6B35"
+                    strokeWidth={4}
+                  />
+                )}
+                <Marker
+                  coordinate={currentPosition}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <View className="w-4 h-4 rounded-full bg-pacer-accent border-2 border-white" />
+                </Marker>
+              </MapView>
+            </View>
+          )}
 
           {/* Pacers + Vibe */}
           <View className="mt-6 bg-pacer-surface px-6 py-3 rounded-full">
