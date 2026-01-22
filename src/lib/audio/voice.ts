@@ -2,6 +2,7 @@ import * as Speech from 'expo-speech';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 
 let audioInitialized = false;
+let memoSound: Audio.Sound | null = null;
 
 // Initialize audio session for mixing with Spotify/music
 export async function initializeAudioSession(): Promise<void> {
@@ -21,6 +22,48 @@ export async function initializeAudioSession(): Promise<void> {
     console.log('Audio session initialized successfully');
   } catch (error) {
     console.error('Failed to initialize audio session:', error);
+  }
+}
+
+export async function playMemoAudio(uri: string, onDone?: () => void): Promise<void> {
+  try {
+    await initializeAudioSession();
+
+    if (memoSound) {
+      await memoSound.unloadAsync();
+      memoSound = null;
+    }
+
+    const { sound } = await Audio.Sound.createAsync(
+      { uri },
+      { shouldPlay: true }
+    );
+
+    memoSound = sound;
+
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (!status.isLoaded) return;
+      if (status.didJustFinish) {
+        void memoSound?.unloadAsync();
+        memoSound = null;
+        onDone?.();
+      }
+    });
+  } catch (error) {
+    console.error('Failed to play memo audio:', error);
+    throw error;
+  }
+}
+
+export async function stopMemoAudio(): Promise<void> {
+  if (!memoSound) return;
+  try {
+    await memoSound.stopAsync();
+    await memoSound.unloadAsync();
+  } catch (error) {
+    console.error('Failed to stop memo audio:', error);
+  } finally {
+    memoSound = null;
   }
 }
 
