@@ -11,10 +11,10 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// For development in Vibecode, use a localhost redirect URI
-// In Strava settings, set Authorization Callback Domain to: localhost:3000
-// This allows us to intercept the OAuth callback
-const STRAVA_REDIRECT_URI = 'http://localhost:3000/strava-callback';
+// Use Expo's auth proxy - this is the standard way for Expo apps
+// The redirect URI will be something like: https://auth.expo.io/@vibecode/vibecode
+// In Strava settings, ONLY set Authorization Callback Domain to: auth.expo.io
+const STRAVA_REDIRECT_URI = `https://auth.expo.io/@vibecode/vibecode`;
 
 // Export for debugging
 export function getRedirectUri(): string {
@@ -170,7 +170,7 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     console.log('Client ID:', STRAVA_CLIENT_ID);
     console.log('Redirect URI:', STRAVA_REDIRECT_URI);
 
-    // Build OAuth URL - use standard authorize endpoint with localhost redirect
+    // Build OAuth URL
     const authUrl = `https://www.strava.com/oauth/authorize?` +
       `client_id=${STRAVA_CLIENT_ID}` +
       `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
@@ -181,9 +181,10 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     console.log('Auth URL:', authUrl);
 
     // Open browser for OAuth
+    // The second parameter is the redirect scheme - Expo will watch for this
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      STRAVA_REDIRECT_URI
+      'exp://'  // Expo will handle redirects back to the app through the proxy
     );
 
     console.log('Auth result type:', result.type);
