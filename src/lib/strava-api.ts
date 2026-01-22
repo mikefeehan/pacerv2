@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Ensure WebBrowser auth session completes properly
@@ -10,10 +11,11 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// IMPORTANT: Strava requires a web domain for the Authorization Callback Domain
-// We use Expo's auth.expo.io proxy which handles the redirect back to the app
-// In Strava settings, set Authorization Callback Domain to: auth.expo.io
-const STRAVA_REDIRECT_URI = 'https://auth.expo.io/@vibecode/vibecode';
+// Use AuthSession.makeRedirectUri which creates the correct redirect URL
+// For Expo Go, this uses the Expo proxy. For standalone apps, it uses the app scheme.
+const STRAVA_REDIRECT_URI = AuthSession.makeRedirectUri({
+  native: 'vibecode://strava-callback',
+});
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
