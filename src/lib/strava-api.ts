@@ -11,12 +11,10 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Generate redirect URI - use the app's custom scheme
-// Strava's MOBILE authorize endpoint accepts custom URL schemes
-const STRAVA_REDIRECT_URI = AuthSession.makeRedirectUri({
-  scheme: 'vibecode',
-  path: 'strava-callback',
-});
+// For development in Vibecode, use a localhost redirect URI
+// In Strava settings, set Authorization Callback Domain to: localhost:3000
+// This allows us to intercept the OAuth callback
+const STRAVA_REDIRECT_URI = 'http://localhost:3000/strava-callback';
 
 // Export for debugging
 export function getRedirectUri(): string {
@@ -172,10 +170,8 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     console.log('Client ID:', STRAVA_CLIENT_ID);
     console.log('Redirect URI:', STRAVA_REDIRECT_URI);
 
-    // Build OAuth URL - use MOBILE authorize endpoint which accepts custom URL schemes
-    // The regular /oauth/authorize endpoint requires HTTPS redirect URIs
-    // The /oauth/mobile/authorize endpoint accepts custom schemes like vibecode://
-    const authUrl = `https://www.strava.com/oauth/mobile/authorize?` +
+    // Build OAuth URL - use standard authorize endpoint with localhost redirect
+    const authUrl = `https://www.strava.com/oauth/authorize?` +
       `client_id=${STRAVA_CLIENT_ID}` +
       `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
       `&response_type=code` +
