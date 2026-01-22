@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -81,6 +81,20 @@ export default function RunRecapScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Auto-upload on mount if toggle is enabled
+  useEffect(() => {
+    const autoUpload = async () => {
+      const autoUploadEnabled = await getStravaAutoUpload();
+      if (autoUploadEnabled && gpsPoints.length > 1 && !isUploading) {
+        // Give UI a moment to render first
+        setTimeout(() => {
+          handleUploadToStrava();
+        }, 500);
+      }
+    };
+    autoUpload();
+  }, []);
 
   const hypeEventCount = session?.hypeEvents.length || 0;
   const recapTracks = session?.recapTracks || [];

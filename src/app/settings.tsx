@@ -344,7 +344,11 @@ export default function SettingsScreen() {
                 setStravaAutoUploadLocal(newValue);
                 setStravaAutoUpload(newValue);
               }}
-              className="bg-pacer-surface rounded-xl p-4 mt-3 flex-row items-center"
+              disabled={!user?.stravaConnected}
+              className={cn(
+                'bg-pacer-surface rounded-xl p-4 mt-3 flex-row items-center',
+                !user?.stravaConnected && 'opacity-50'
+              )}
             >
               <View className="flex-1">
                 <Text className="text-pacer-white font-medium">
