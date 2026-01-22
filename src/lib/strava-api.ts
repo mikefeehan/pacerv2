@@ -1,7 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 
 // Ensure WebBrowser auth session completes properly
 WebBrowser.maybeCompleteAuthSession();
@@ -11,8 +10,11 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Build redirect URI - for Expo Go, use the vibecode scheme
-const STRAVA_REDIRECT_URI = 'vibecode://strava-callback';
+// Build redirect URI using Linking - this creates the proper scheme URL
+const STRAVA_REDIRECT_URI = Linking.createURL('strava-callback');
+
+// Log the redirect URI for debugging (check this matches your Strava app settings)
+console.log('Strava Redirect URI:', STRAVA_REDIRECT_URI);
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
@@ -159,18 +161,27 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
   }
 
   try {
-    // Build OAuth URL
-    const authUrl = `https://www.strava.com/oauth/mobile/authorize?` +
+    console.log('Starting Strava OAuth...');
+    console.log('Client ID:', STRAVA_CLIENT_ID);
+    console.log('Redirect URI:', STRAVA_REDIRECT_URI);
+
+    // Build OAuth URL - use standard authorize endpoint
+    const authUrl = `https://www.strava.com/oauth/authorize?` +
       `client_id=${STRAVA_CLIENT_ID}` +
       `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
       `&response_type=code` +
       `&approval_prompt=auto` +
       `&scope=activity:write,activity:read_all`;
 
+    console.log('Auth URL:', authUrl);
+
     // Open browser for OAuth
     const result = await WebBrowser.openAuthSessionAsync(authUrl, STRAVA_REDIRECT_URI);
 
+    console.log('Auth result type:', result.type);
+
     if (result.type !== 'success' || !result.url) {
+      console.log('Auth was cancelled or failed');
       return null;
     }
 
@@ -186,6 +197,7 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
       const codeMatch = urlString.match(/[?&]code=([^&]+)/);
       if (codeMatch) {
         code = decodeURIComponent(codeMatch[1]);
+        console.log('Got authorization code');
       }
 
       // Also check for error
@@ -205,6 +217,7 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     }
 
     // Exchange code for tokens
+    console.log('Exchanging code for tokens...');
     const tokenResponse = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -219,10 +232,13 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     });
 
     if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.error('Token exchange failed:', tokenResponse.status, errorText);
       throw new Error('Failed to exchange code for tokens');
     }
 
     const tokenData = await tokenResponse.json();
+    console.log('Token exchange successful!');
 
     const tokens: StravaTokens = {
       accessToken: tokenData.access_token,
@@ -232,6 +248,7 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     };
 
     await storeTokens(tokens);
+    console.log('Tokens stored successfully');
     return tokens;
   } catch (e) {
     console.error('Strava OAuth failed:', e);
