@@ -24,6 +24,7 @@ import {
 import { VIBES } from '@/lib/types';
 import type { TriggerType } from '@/lib/types';
 import { triggerHypeHaptics, stopHaptics, getHapticPatternDescription } from '@/lib/haptics';
+import { speakLine, stopSpeaking } from '@/lib/audio/voice';
 import * as Haptics from 'expo-haptics';
 import {
   requestLocationPermissions,
@@ -134,6 +135,7 @@ export default function RunActiveScreen() {
         clearInterval(timerRef.current);
       }
       stopHaptics();
+      stopSpeaking();
     };
   }, []);
 
@@ -319,11 +321,21 @@ export default function RunActiveScreen() {
     setHypeMessage(generatedText || "You've got this!");
     setShowHypeOverlay(true);
 
+    // Speak the hype message
+    try {
+      if (generatedText) {
+        await speakLine(generatedText);
+      }
+    } catch (e) {
+      console.error('Failed to speak hype message:', e);
+    }
+
     // Hide overlay after a few seconds and stop haptics
     setTimeout(() => {
       setShowHypeOverlay(false);
       setHapticsActive(false);
       stopHaptics();
+      stopSpeaking();
     }, 4000);
   };
 

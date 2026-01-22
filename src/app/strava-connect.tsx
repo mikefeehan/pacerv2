@@ -64,9 +64,9 @@ export default function StravaConnectScreen() {
 
     // Check if Strava is configured
     if (!isStravaConfigured()) {
-      // Fall back to demo mode if not configured
-      console.log('Strava not configured, using demo mode');
-      await simulateConnection();
+      setError('Connect Strava unavailable (missing API keys). Add EXPO_PUBLIC_STRAVA_CLIENT_ID and EXPO_PUBLIC_STRAVA_CLIENT_SECRET in the ENV tab.');
+      setIsConnecting(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
@@ -94,19 +94,6 @@ export default function StravaConnectScreen() {
       setIsConnecting(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
-  };
-
-  // Demo mode fallback when Strava API keys aren't configured
-  const simulateConnection = async () => {
-    // Simulate OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setIsConnected(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    completeConnection('demo_strava_12345');
   };
 
   return (

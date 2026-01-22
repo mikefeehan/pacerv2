@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore, useAppSettingsStore, usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
+import { getStravaAutoUpload, setStravaAutoUpload } from '@/lib/app-settings';
 import * as Haptics from 'expo-haptics';
 import type { IntensityLevel } from '@/lib/types';
 
@@ -59,6 +60,13 @@ export default function SettingsScreen() {
   const setDuckAmount = useAppSettingsStore((s) => s.setDuckAmount);
   const setHypeFrequency = useAppSettingsStore((s) => s.setHypeFrequency);
   const setShowStravaPostPreview = useAppSettingsStore((s) => s.setShowStravaPostPreview);
+
+  const [stravaAutoUpload, setStravaAutoUploadLocal] = useState<boolean>(true);
+
+  // Load auto-upload setting on mount
+  useEffect(() => {
+    getStravaAutoUpload().then(setStravaAutoUploadLocal);
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -279,6 +287,38 @@ export default function SettingsScreen() {
                   className={cn(
                     'w-5 h-5 rounded-full bg-white',
                     showStravaPostPreview ? 'ml-auto' : ''
+                  )}
+                />
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                const newValue = !stravaAutoUpload;
+                setStravaAutoUploadLocal(newValue);
+                setStravaAutoUpload(newValue);
+              }}
+              className="bg-pacer-surface rounded-xl p-4 mt-3 flex-row items-center"
+            >
+              <View className="flex-1">
+                <Text className="text-pacer-white font-medium">
+                  Auto-upload runs
+                </Text>
+                <Text className="text-pacer-muted text-sm">
+                  Automatically upload to Strava after run ends
+                </Text>
+              </View>
+              <View
+                className={cn(
+                  'w-12 h-7 rounded-full p-1',
+                  stravaAutoUpload ? 'bg-pacer-accent' : 'bg-pacer-border'
+                )}
+              >
+                <View
+                  className={cn(
+                    'w-5 h-5 rounded-full bg-white',
+                    stravaAutoUpload ? 'ml-auto' : ''
                   )}
                 />
               </View>

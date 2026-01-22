@@ -10,14 +10,17 @@ import { Button } from '@/components/Button';
 import { PacerLogo } from '@/components/PacerLogo';
 import { useActiveRunStore } from '@/lib/run-store';
 import { useAppSettingsStore } from '@/lib/stores';
+import { VIBES } from '@/lib/types';
 import {
   getBoundingBox,
-  generateGPX,
   formatDuration,
   formatPace,
   formatDistance,
 } from '@/lib/gps-tracking';
+import { buildGpx } from '@/lib/gpx-writer';
+import { generateStravaTitle, generateStravaDescription } from '@/lib/strava-title';
 import { uploadGPXToStrava, isStravaConnected } from '@/lib/strava-api';
+import { getStravaAutoUpload } from '@/lib/app-settings';
 import * as Haptics from 'expo-haptics';
 
 const VIBE_LABELS: Record<string, string> = {
@@ -106,21 +109,43 @@ export default function RunRecapScreen() {
   // Calculate calories (rough estimate: ~100 cal per mile for average runner)
   const estimatedCalories = Math.round((stats.distance || 0) * 100);
 
-  const generateStravaDescription = () => {
-    let desc = `Run powered by PACER — paced by ${pacerNames}.\n`;
-    desc += `Vibe: ${vibeName}\n\n`;
-    desc += `"${pacerMessage}"\n`;
+  // Get the average pace
+  const averagePace = stats.elapsedTime > 0 && stats.distance > 0
+    ? (stats.elapsedTime / 60) / stats.distance
+    : 0;
 
+  // Generate Strava title using personalized format
+  const stravaTitle = useMemo(() => {
+    return generateStravaTitle({
+      distance: stats.distance || 0,
+      pace: averagePace,
+      pacers: session?.pacerNames || [],
+    });
+  }, [stats.distance, averagePace, session?.pacerNames]);
+
+  // Generate Strava description with tracks and vibe
+  const stravaDescription = useMemo(() => {
+    const vibeConfig = VIBES.find((v: any) => v.type === session?.vibe);
+    const baseDesc = generateStravaDescription({
+      distance: stats.distance || 0,
+      duration: stats.elapsedTime || 0,
+      pace: averagePace,
+      hypeCount: hypeEventCount,
+      pacers: session?.pacerNames || [],
+      vibeEmoji: vibeConfig?.emoji || '🏃',
+    });
+
+    // Add custom tracks info
+    let fullDesc = baseDesc;
     if (recapTracks.length > 0) {
-      desc += `\nSongs that carried me:\n`;
+      fullDesc += '\n\nSongs that carried me:\n';
       recapTracks.forEach((track) => {
-        desc += `• ${track.trackName} — ${track.artistName}\n`;
+        fullDesc += `• ${track.trackName} — ${track.artistName}\n`;
       });
     }
 
-    desc += `\n🏃‍♂️ pacer.app`;
-    return desc;
-  };
+    return fullDesc;
+  }, [stats, hypeEventCount, session?.pacerNames, session?.vibe, recapTracks]);
 
   const handleUploadToStrava = async () => {
     setIsUploading(true);
@@ -136,36 +161,44 @@ export default function RunRecapScreen() {
       return;
     }
 
-    // Generate GPX file
-    const gpxContent = generateGPX(
-      gpsPoints,
-      `PACER Run with ${pacerNames}`,
-      generateStravaDescription()
-    );
+    // Generate GPX file using new buildGpx
+    try {
+      const gpxContent = buildGpx({
+        name: stravaTitle,
+        description: stravaDescription,
+        points: gpsPoints,
+      });
 
-    if (!gpxContent) {
-      setUploadError('No GPS data to upload.');
+      if (!gpxContent) {
+        setUploadError('No GPS data to upload.');
+        setIsUploading(false);
+        setUploadStatus('error');
+        return;
+      }
+
+      // Upload to Strava
+      const result = await uploadGPXToStrava(
+        gpxContent,
+        stravaTitle,
+        stravaDescription,
+        'run'
+      );
+
+      setIsUploading(false);
+
+      if (result.success) {
+        setUploadStatus('success');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setUploadStatus('error');
+        setUploadError(result.error || 'Upload failed');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (e) {
+      console.error('Upload error:', e);
       setIsUploading(false);
       setUploadStatus('error');
-      return;
-    }
-
-    // Upload to Strava
-    const result = await uploadGPXToStrava(
-      gpxContent,
-      `PACER Run with ${pacerNames}`,
-      generateStravaDescription(),
-      'run'
-    );
-
-    setIsUploading(false);
-
-    if (result.success) {
-      setUploadStatus('success');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      setUploadStatus('error');
-      setUploadError(result.error || 'Upload failed');
+      setUploadError(e instanceof Error ? e.message : 'Upload failed');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };

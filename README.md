@@ -4,6 +4,20 @@
 
 PACER is a running companion app that integrates with Strava. During a run, PACER plays motivational voice (real memos or AI-generated) in your friend's voice + music curated from their taste, triggered automatically when you struggle.
 
+## 🚀 PACER V1 "Make it Real" Implementation
+
+This version removes all demo simulation and implements real GPS tracking, real Strava integration, and auto-upload functionality.
+
+### What's New in V1
+
+- ✅ **Real GPS Tracking**: Live GPS updates during runs with distance, pace, and route recording
+- ✅ **Real Strava Integration**: OAuth connection, GPX file generation, and activity uploads
+- ✅ **Auto-Upload Toggle**: Automatic Strava upload after run ends (configurable in Settings)
+- ✅ **Personalized Titles**: Activity titles formatted as "{distance} mi • {pace}/mi • w/ {pacer}"
+- ✅ **Voice Integration**: PACER speaks hype messages during runs (overlays on Spotify)
+- ✅ **Hype Engine**: Automatically triggers when pace drops, with 90-second cooldown and max 6 events per run
+- ✅ **No Demo Mode**: All simulation removed—requires real Strava credentials
+
 ## Features
 
 - **Real GPS Tracking**: Track your runs with accurate GPS location data
@@ -16,7 +30,7 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 - **Voice Memos**: Record 3 core phrases + optional bonus memos
 - **AI Voice**: Generate new motivational lines in your voice (with consent)
 - **Music Sharing**: Share your Spotify playlists for runs
-- **Struggle Detection**: Automatic detection of when you need a boost
+- **Struggle Detection**: Automatic detection of when you need a boost (pace drops)
 - **Hype Events**: Voice + music triggered during tough moments
 - **Haptic Feedback**: Vibe-specific haptic patterns during hype moments
 - **Post-Run Recap**: Beautiful recap with map, stats, and Pacer motivational message
@@ -32,14 +46,15 @@ PACER integrates with Strava to upload your runs:
    - Distance, duration, and pace stats
    - PACER recap with Pacer motivational message
    - Songs that carried you during the run
+   - Auto-upload toggle (Settings → Strava → Auto-upload runs)
 
-### Setting Up Strava (for real uploads)
+### Setting Up Strava (Required for V1)
 
 To enable real Strava uploads, add these environment variables in the ENV tab:
 - `EXPO_PUBLIC_STRAVA_CLIENT_ID` - Your Strava app client ID
 - `EXPO_PUBLIC_STRAVA_CLIENT_SECRET` - Your Strava app client secret
 
-Without these, the app runs in demo mode with simulated Strava connection.
+**Note**: Without these, the app will show "Connect Strava unavailable (missing API keys)" and will not allow Strava connection or uploads.
 
 ## Becoming a Pacer
 
@@ -98,9 +113,9 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 4. **Onboarding** → 3-step Pacer setup (identity, phrases, bonus memos)
 5. **Home** → Select your Pacers for today's run
 6. **Pre-Run** → Configure pacers, vibe, voice mode, music, haptics
-7. **Run Active** → Hands-free running with hype events + haptics
-8. **Run Recap** → Post-run summary with stats
-9. **Strava Post** → Share your PACER experience
+7. **Run Active** → Hands-free running with hype events + haptics + voice
+8. **Run Recap** → Post-run summary with stats and map
+9. **Strava Upload** → Auto or manual upload to Strava
 
 ## Screens
 
@@ -108,14 +123,14 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 |--------|-------|-------------|
 | Splash | `/` | Animated logo, auto-navigation |
 | Welcome | `/welcome` | Main CTA to connect Strava |
-| Strava Connect | `/strava-connect` | OAuth flow (mocked) |
+| Strava Connect | `/strava-connect` | OAuth flow (real) |
 | Onboarding | `/onboarding` | 3-step Pacer Pack creation |
 | Home | `/home` | My Pacers list, start run CTA |
 | Pre-Run | `/pre-run` | Run configuration (5 steps) |
-| Run Active | `/run-active` | Minimal UI during run |
-| Run Recap | `/run-recap` | Post-run summary |
+| Run Active | `/run-active` | Minimal UI during run with live GPS stats |
+| Run Recap | `/run-recap` | Post-run summary with map and upload button |
 | Strava Post | `/strava-post` | Editable post preview |
-| Settings | `/settings` | App preferences |
+| Settings | `/settings` | App preferences + Strava auto-upload toggle |
 | Invite Pacer | `/invite-pacer` | Invite friends |
 | Public Pacers | `/public-pacers` | Discover public pacers |
 | Public Pacer Profile | `/public-pacer-profile` | View pacer details |
@@ -131,7 +146,9 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 - React Native Reanimated (animations)
 - React Native Maps (route visualization)
 - Expo Haptics (haptic feedback)
+- Expo Speech (voice playback)
 - Lucide Icons
+- React Query (server state)
 
 ## Run Tracking
 
@@ -139,8 +156,19 @@ During a run, PACER:
 - Tracks your GPS location with high accuracy
 - Calculates distance, pace, and duration in real-time
 - Detects struggle moments (pace drops, stalls, late-run fatigue)
-- Triggers hype events with Pacer voice + music
+- Triggers hype events with Pacer voice + music + haptics
 - Records your route for the post-run map
+- Speaks motivational messages that overlay on Spotify
+
+### Hype Trigger Logic
+
+Hype events trigger automatically when:
+- **Pace Drop**: Rolling pace becomes 7% slower than baseline (after 6 min warmup)
+- **Stall**: After mile 2, if pace drops 15% from baseline
+- **Late Run**: One-time trigger at 15-20% of estimated run duration
+
+Cooldown: 90 seconds between hype events
+Max: 6 hype events per run
 
 ## Post-Run Recap
 
@@ -150,11 +178,7 @@ After your run, see:
 - **Pacer Message**: Motivational text from your Pacer based on vibe
 - **Songs**: The tracks that carried you through hype moments
 - **Hype Timeline**: When your Pacers came through for you
-- **Upload to Strava**: One-tap GPX upload with full recap
-
-## Demo Mode
-
-The app includes a simulated 25-minute run with struggle moments for demonstration. During hype events, pacers rotate evenly and haptics trigger 0.2s before voice plays.
+- **Upload to Strava**: One-tap GPX upload with full recap or auto-upload
 
 ## Data Models
 
@@ -165,11 +189,13 @@ The app includes a simulated 25-minute run with struggle moments for demonstrati
 - **RunSession**: Active/completed run data (supports multi-pacer)
 - **HypeEvent**: Individual trigger events with pacer attribution
 - **HapticSettings**: Haptic feedback configuration
+- **GPSPoint**: Individual GPS location with timestamp and speed
+- **RecapTrack**: Track played during hype event
 
 ## Stores
 
 - `useAuthStore`: User authentication state
 - `usePacerStore`: Pacers and relationships
 - `useRunSettingsStore`: Pre-run configuration (incl. haptics)
-- `useActiveRunStore`: Live run state and simulation
-- `useAppSettingsStore`: App preferences
+- `useActiveRunStore`: Live run state (real GPS, hype events)
+- `useAppSettingsStore`: App preferences (Strava auto-upload, post preview)
