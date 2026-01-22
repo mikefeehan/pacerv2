@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
           >
             <Image
               source={require('../../public/chatgpt-image-jan-21--2026--06-19-03-pm-1.png')}
-              style={{ width: 260, height: 130 }}
+              style={{ width: 320, height: 160 }}
               resizeMode="contain"
             />
           </Animated.View>

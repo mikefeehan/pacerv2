@@ -60,7 +60,7 @@ export default function SplashScreenPage() {
       <Animated.View style={logoAnimatedStyle}>
         <Image
           source={require('../../public/chatgpt-image-jan-21--2026--06-19-03-pm-1.png')}
-          style={{ width: 280, height: 140 }}
+          style={{ width: 340, height: 170 }}
           resizeMode="contain"
         />
       </Animated.View>
