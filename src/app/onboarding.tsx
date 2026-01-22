@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,11 +24,11 @@ import { cn } from '@/lib/cn';
 import { PACER_TYPES } from '@/lib/types';
 import type { VoiceMemo, PacerType } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
+import { useVoiceMemo } from '@/lib/audio/useVoiceMemo';
 
 const TOTAL_STEPS = 3;
 const MIN_CORE_PHRASES = 3;
 const MAX_BONUS_MEMOS = 2;
-
 export default function OnboardingScreen() {
   const router = useRouter();
   const updateUser = useAuthStore((s) => s.updateUser);
@@ -38,22 +38,39 @@ export default function OnboardingScreen() {
   const [selectedPacerType, setSelectedPacerType] = useState<PacerType | null>(null);
   const [corePhrases, setCorePhrases] = useState<VoiceMemo[]>([]);
   const [bonusMemos, setBonusMemos] = useState<VoiceMemo[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
+  const playbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    isReady,
+    isRecording,
+    durationMs,
+    error: voiceError,
+    startRecording,
+    stopRecording,
+    play,
+    stopPlayback,
+  } = useVoiceMemo();
 
   const selectedTypeConfig = PACER_TYPES.find(t => t.type === selectedPacerType);
 
-  // Simulate recording a memo
-  const handleStartRecording = (isBonus: boolean) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsRecording(true);
+  useEffect(() => () => {
+    if (playbackTimeoutRef.current) {
+      clearTimeout(playbackTimeoutRef.current);
+    }
+    void stopPlayback();
+  }, []);
 
-    const duration = 2 + Math.random() * 2; // 2-4 seconds
-    setTimeout(() => {
+  const handleStartRecording = async (isBonus: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (isRecording) {
+      const uri = await stopRecording();
+      if (!uri) return;
+
+      const durationSeconds = Math.max(1, Math.round((durationMs ?? 0) / 1000));
       const newMemo: VoiceMemo = {
         id: `memo_${Date.now()}`,
-        url: '',
-        duration: Math.round(duration),
+        url: uri,
+        duration: durationSeconds,
         vibeTag: isBonus ? undefined : selectedPacerType ?? undefined,
         isBonus,
         name: isBonus
@@ -67,9 +84,11 @@ export default function OnboardingScreen() {
       } else {
         setCorePhrases((prev) => [...prev, newMemo]);
       }
-      setIsRecording(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, duration * 1000);
+      return;
+    }
+
+    await startRecording();
   };
 
   const handleDeleteMemo = (id: string, isBonus: boolean) => {
@@ -81,15 +100,27 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handlePlayMemo = (id: string, memos: VoiceMemo[]) => {
+  const handlePlayMemo = async (id: string, memos: VoiceMemo[]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (playingMemoId === id) {
       setPlayingMemoId(null);
+      await stopPlayback();
     } else {
-      setPlayingMemoId(id);
       const memo = memos.find((m) => m.id === id);
       if (memo) {
-        setTimeout(() => setPlayingMemoId(null), memo.duration * 1000);
+        if (playbackTimeoutRef.current) {
+          clearTimeout(playbackTimeoutRef.current);
+        }
+        try {
+          setPlayingMemoId(id);
+          await play(memo.url);
+          playbackTimeoutRef.current = setTimeout(
+            () => setPlayingMemoId(null),
+            memo.duration * 1000
+          );
+        } catch (error) {
+          setPlayingMemoId(null);
+        }
       }
     }
   };
@@ -308,6 +339,16 @@ export default function OnboardingScreen() {
         <Text className="text-pacer-muted text-sm mt-3">
           {isRecording ? 'Recording...' : 'Tap to record'}
         </Text>
+        {!isReady && (
+          <Text className="text-pacer-muted text-xs mt-2">
+            Enable microphone access to record your phrases.
+          </Text>
+        )}
+        {voiceError && (
+          <Text className="text-red-400 text-xs mt-2">
+            {voiceError}
+          </Text>
+        )}
       </View>
     </Animated.View>
   );

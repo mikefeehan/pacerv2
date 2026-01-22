@@ -25,7 +25,7 @@ import {
 import { VIBES } from '@/lib/types';
 import type { TriggerType } from '@/lib/types';
 import { triggerHypeHaptics, stopHaptics, getHapticPatternDescription } from '@/lib/haptics';
-import { speakLine, stopSpeaking } from '@/lib/audio/voice';
+import { playMemoAudio, speakLine, stopMemoAudio, stopSpeaking } from '@/lib/audio/voice';
 import * as Haptics from 'expo-haptics';
 import {
   requestLocationPermissions,
@@ -146,6 +146,7 @@ export default function RunActiveScreen() {
       }
       stopHaptics();
       stopSpeaking();
+      void stopMemoAudio();
     };
   }, []);
 
@@ -276,6 +277,7 @@ export default function RunActiveScreen() {
     // Determine voice type and content
     let voiceType: 'real' | 'ai' = 'real';
     let memoId: string | undefined;
+    let memoUrl: string | undefined;
     let generatedText: string | undefined;
 
     if (voiceMode === 'ai_only') {
@@ -287,6 +289,7 @@ export default function RunActiveScreen() {
       const memo = getMemoForPacer(pacerUserId, vibe, usedMemoIds);
       if (memo) {
         memoId = memo.id;
+        memoUrl = memo.url;
         generatedText = memo.name;
         markMemoUsed(memo.id);
       } else {
@@ -299,6 +302,7 @@ export default function RunActiveScreen() {
       if (memo && usedMemoIds.size < 4) {
         voiceType = 'real';
         memoId = memo.id;
+        memoUrl = memo.url;
         generatedText = memo.name;
         markMemoUsed(memo.id);
       } else {
@@ -344,11 +348,13 @@ export default function RunActiveScreen() {
 
     // Speak the hype message
     try {
-      if (generatedText) {
+      if (voiceType === 'real' && memoUrl) {
+        await playMemoAudio(memoUrl);
+      } else if (generatedText) {
         await speakLine(generatedText);
       }
     } catch (e) {
-      console.error('Failed to speak hype message:', e);
+      console.error('Failed to play hype message:', e);
     }
 
     // Hide overlay after a few seconds and stop haptics
@@ -357,6 +363,7 @@ export default function RunActiveScreen() {
       setHapticsActive(false);
       stopHaptics();
       stopSpeaking();
+      void stopMemoAudio();
     }, 4000);
   };
 
