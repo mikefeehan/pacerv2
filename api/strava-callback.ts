@@ -88,14 +88,10 @@ export default async function handler(req: any, res: any) {
     console.log('Successfully exchanged code for tokens');
 
     // Redirect back to app with tokens as query parameters
-    const deepLink = new URL('vibecode://strava-callback');
-    deepLink.searchParams.set('accessToken', access_token);
-    deepLink.searchParams.set('refreshToken', refresh_token);
-    deepLink.searchParams.set('expiresAt', expires_at.toString());
-    deepLink.searchParams.set('athleteId', athlete.id.toString());
+    const deepLink = `vibecode://strava-callback?accessToken=${encodeURIComponent(access_token)}&refreshToken=${encodeURIComponent(refresh_token)}&expiresAt=${encodeURIComponent(expires_at.toString())}&athleteId=${encodeURIComponent(athlete.id.toString())}`;
 
     console.log('Redirecting to app with tokens');
-    return res.redirect(deepLink.toString());
+    return res.redirect(deepLink);
   } catch (err) {
     console.error('Unexpected error in Strava callback handler:', err);
     return res.redirect('vibecode://strava-callback?error=unexpected_error');
