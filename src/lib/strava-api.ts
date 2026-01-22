@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Ensure WebBrowser auth session completes properly
@@ -10,10 +11,16 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Strava only accepts HTTPS redirect URIs, so we must use Expo's auth proxy
-// The proxy URL format is: https://auth.expo.io/@{owner}/{slug}
-// Make sure "Authorization Callback Domain" in Strava is set to: auth.expo.io
-const STRAVA_REDIRECT_URI = 'https://auth.expo.io/@vibecode/vibecode';
+// Generate redirect URI properly - this will use the Expo proxy in development
+const STRAVA_REDIRECT_URI = AuthSession.makeRedirectUri({
+  scheme: 'vibecode',
+  path: 'strava-callback',
+});
+
+// Export for debugging
+export function getRedirectUri(): string {
+  return STRAVA_REDIRECT_URI;
+}
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
@@ -174,14 +181,14 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
 
     console.log('Auth URL:', authUrl);
 
-    // Open browser for OAuth using the Expo scheme for the return URL
-    // This tells the auth proxy where to redirect after Strava authorizes
+    // Open browser for OAuth
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      'vibecode://'  // Return URL scheme - auth.expo.io will redirect here
+      STRAVA_REDIRECT_URI
     );
 
     console.log('Auth result type:', result.type);
+    console.log('Auth result:', JSON.stringify(result));
 
     if (result.type !== 'success' || !result.url) {
       console.log('Auth was cancelled or failed');

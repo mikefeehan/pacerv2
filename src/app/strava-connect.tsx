@@ -12,6 +12,7 @@ import {
   startStravaOAuth,
   isStravaConfigured,
   isStravaConnected,
+  getRedirectUri,
 } from '@/lib/strava-api';
 import * as Haptics from 'expo-haptics';
 
@@ -25,6 +26,10 @@ export default function StravaConnectScreen() {
 
   // Check if already connected on mount
   React.useEffect(() => {
+    // Log redirect URI for debugging
+    console.log('=== STRAVA REDIRECT URI ===');
+    console.log(getRedirectUri());
+    console.log('===========================');
     checkExistingConnection();
   }, []);
 
