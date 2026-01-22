@@ -11,8 +11,8 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Build redirect URI - use Linking for Expo Go
-const STRAVA_REDIRECT_URI = Linking.createURL('strava-callback');
+// Build redirect URI - for Expo Go, use the vibecode scheme
+const STRAVA_REDIRECT_URI = 'vibecode://strava-callback';
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
