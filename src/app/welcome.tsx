@@ -28,8 +28,8 @@ export default function WelcomeScreen() {
             className="items-center flex-1 justify-center"
           >
             <Image
-              source={require('../../public/image-1768984637.png')}
-              style={{ width: 240, height: 300 }}
+              source={require('../../public/chatgpt-image-jan-21--2026--06-19-03-pm-1.png')}
+              style={{ width: 260, height: 130 }}
               resizeMode="contain"
             />
           </Animated.View>

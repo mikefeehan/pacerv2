@@ -59,8 +59,8 @@ export default function SplashScreenPage() {
     <View className="flex-1 bg-black items-center justify-center">
       <Animated.View style={logoAnimatedStyle}>
         <Image
-          source={require('../../public/image-1768984637.png')}
-          style={{ width: 280, height: 360 }}
+          source={require('../../public/chatgpt-image-jan-21--2026--06-19-03-pm-1.png')}
+          style={{ width: 280, height: 140 }}
           resizeMode="contain"
         />
       </Animated.View>
