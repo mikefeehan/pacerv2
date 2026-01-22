@@ -10,11 +10,10 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Build redirect URI using Linking - this creates the proper scheme URL
-const STRAVA_REDIRECT_URI = Linking.createURL('strava-callback');
-
-// Log the redirect URI for debugging (check this matches your Strava app settings)
-console.log('Strava Redirect URI:', STRAVA_REDIRECT_URI);
+// IMPORTANT: Strava requires a web domain for the Authorization Callback Domain
+// We use Expo's auth.expo.io proxy which handles the redirect back to the app
+// In Strava settings, set Authorization Callback Domain to: auth.expo.io
+const STRAVA_REDIRECT_URI = 'https://auth.expo.io/@vibecode/vibecode';
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
