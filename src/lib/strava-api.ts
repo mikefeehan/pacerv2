@@ -1,12 +1,18 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Strava OAuth Configuration
 // You need to set these in the ENV tab of Vibecode
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
-const STRAVA_REDIRECT_URI = Linking.createURL('strava-callback');
+
+// Use expo-auth-session redirect URI which goes through auth.expo.io
+const STRAVA_REDIRECT_URI = makeRedirectUri({
+  scheme: 'pacer',
+  path: 'strava-callback',
+});
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';
