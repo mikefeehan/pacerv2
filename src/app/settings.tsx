@@ -13,10 +13,12 @@ import {
   ChevronRight,
   LogOut,
   Check,
+  Play,
 } from 'lucide-react-native';
 import { useAuthStore, useAppSettingsStore, usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { cn } from '@/lib/cn';
 import { getStravaAutoUpload, setStravaAutoUpload } from '@/lib/app-settings';
+import { testSpeech, isSpeechAvailable } from '@/lib/audio/voice';
 import * as Haptics from 'expo-haptics';
 import type { IntensityLevel } from '@/lib/types';
 
@@ -62,11 +64,36 @@ export default function SettingsScreen() {
   const setShowStravaPostPreview = useAppSettingsStore((s) => s.setShowStravaPostPreview);
 
   const [stravaAutoUpload, setStravaAutoUploadLocal] = useState<boolean>(true);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
 
   // Load auto-upload setting on mount
   useEffect(() => {
     getStravaAutoUpload().then(setStravaAutoUploadLocal);
   }, []);
+
+  const handleTestVoice = async () => {
+    setIsTestingVoice(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const available = await isSpeechAvailable();
+      if (!available) {
+        Alert.alert('Voice Unavailable', 'No speech voices available on this device.');
+        setIsTestingVoice(false);
+        return;
+      }
+
+      const success = await testSpeech();
+      if (!success) {
+        Alert.alert('Voice Test Failed', 'Could not play voice. Check your device volume.');
+      }
+    } catch (e) {
+      console.error('Voice test error:', e);
+      Alert.alert('Error', 'Failed to test voice. Please try again.');
+    } finally {
+      setIsTestingVoice(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -198,6 +225,24 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+
+            {/* Test Voice Button */}
+            <Pressable
+              onPress={handleTestVoice}
+              disabled={isTestingVoice}
+              className={cn(
+                'bg-pacer-surface rounded-xl p-4 flex-row items-center justify-center',
+                isTestingVoice && 'opacity-60'
+              )}
+            >
+              <Play size={18} color="#FF6B35" />
+              <Text className="text-pacer-accent font-medium ml-2">
+                {isTestingVoice ? 'Playing...' : 'Test Voice'}
+              </Text>
+            </Pressable>
+            <Text className="text-pacer-muted text-xs text-center mt-2">
+              Make sure your volume is up
+            </Text>
           </Animated.View>
 
           {/* Hype Settings */}

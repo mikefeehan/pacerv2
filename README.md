@@ -10,13 +10,25 @@ This version removes all demo simulation and implements real GPS tracking, real 
 
 ### What's New in V1
 
-- ✅ **Real GPS Tracking**: Live GPS updates during runs with distance, pace, and route recording
-- ✅ **Real Strava Integration**: OAuth connection, GPX file generation, and activity uploads
-- ✅ **Auto-Upload Toggle**: Automatic Strava upload after run ends (configurable in Settings)
-- ✅ **Personalized Titles**: Activity titles formatted as "{distance} mi • {pace}/mi • w/ {pacer}"
-- ✅ **Voice Integration**: PACER speaks hype messages during runs (overlays on Spotify)
-- ✅ **Hype Engine**: Automatically triggers when pace drops, with 90-second cooldown and max 6 events per run
-- ✅ **No Demo Mode**: All simulation removed—requires real Strava credentials
+- **Real GPS Tracking**: Live GPS updates during runs with distance, pace, and route recording
+- **Live Map**: See your current position and route as you run
+- **Real Strava Integration**: OAuth connection, GPX file generation, and activity uploads
+- **Auto-Upload Toggle**: Automatic Strava upload after run ends (configurable in Settings)
+- **Personalized Titles**: Activity titles formatted as "{distance} mi • {pace}/mi • w/ {pacer}"
+- **Voice Integration**: PACER speaks hype messages during runs (text-to-speech that overlays on music)
+- **Test Voice Button**: Settings has a "Test Voice" button to verify audio works on your device
+- **Hype Engine**: Automatically triggers when pace drops, with 90-second cooldown and max 6 events per run
+- **No Demo Mode**: All simulation removed—requires real Strava credentials
+
+### Setting Up Strava
+
+1. Go to [Strava Developer Portal](https://www.strava.com/settings/api)
+2. Create an application with these settings:
+   - **Authorization Callback Domain**: `vibecode`
+3. Copy your Client ID and Client Secret
+4. Add these in the ENV tab:
+   - `EXPO_PUBLIC_STRAVA_CLIENT_ID` - Your Strava app client ID
+   - `EXPO_PUBLIC_STRAVA_CLIENT_SECRET` - Your Strava app client secret
 
 ## Features
 
@@ -48,13 +60,9 @@ PACER integrates with Strava to upload your runs:
    - Songs that carried you during the run
    - Auto-upload toggle (Settings → Strava → Auto-upload runs)
 
-### Setting Up Strava (Required for V1)
+### Strava Callback Domain
 
-To enable real Strava uploads, add these environment variables in the ENV tab:
-- `EXPO_PUBLIC_STRAVA_CLIENT_ID` - Your Strava app client ID
-- `EXPO_PUBLIC_STRAVA_CLIENT_SECRET` - Your Strava app client secret
-
-**Note**: Without these, the app will show "Connect Strava unavailable (missing API keys)" and will not allow Strava connection or uploads.
+When setting up your Strava app, the Authorization Callback Domain must be set to `vibecode` (without any slashes or protocol).
 
 ## Becoming a Pacer
 

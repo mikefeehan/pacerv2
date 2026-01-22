@@ -175,11 +175,32 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     }
 
     // Parse the authorization code from the URL
-    const urlParams = new URL(result.url);
-    const code = urlParams.searchParams.get('code');
+    // Custom URL schemes don't work with new URL(), so manually parse
+    let code: string | null = null;
+    try {
+      // Try to extract code from query params manually
+      const urlString = result.url;
+      console.log('OAuth callback URL:', urlString);
+
+      // Look for code parameter in the URL
+      const codeMatch = urlString.match(/[?&]code=([^&]+)/);
+      if (codeMatch) {
+        code = decodeURIComponent(codeMatch[1]);
+      }
+
+      // Also check for error
+      const errorMatch = urlString.match(/[?&]error=([^&]+)/);
+      if (errorMatch) {
+        console.error('Strava OAuth error:', decodeURIComponent(errorMatch[1]));
+        return null;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse OAuth callback URL:', parseError);
+      return null;
+    }
 
     if (!code) {
-      console.error('No authorization code received');
+      console.error('No authorization code received from URL:', result.url);
       return null;
     }
 
