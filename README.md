@@ -22,13 +22,15 @@ This version removes all demo simulation and implements real GPS tracking, real 
 
 ### Setting Up Strava
 
-1. Go to [Strava Developer Portal](https://www.strava.com/settings/api)
-2. Create an application with these settings:
-   - **Authorization Callback Domain**: `vibecode`
-3. Copy your Client ID and Client Secret
-4. Add these in the ENV tab:
-   - `EXPO_PUBLIC_STRAVA_CLIENT_ID` - Your Strava app client ID
-   - `EXPO_PUBLIC_STRAVA_CLIENT_SECRET` - Your Strava app client secret
+For App Store launch, you need a dedicated backend to handle Strava OAuth callbacks (Expo's proxy is no longer reliable).
+
+**See [BACKEND_DEPLOYMENT.md](./BACKEND_DEPLOYMENT.md) for complete deployment instructions.**
+
+**Quick Summary:**
+1. Deploy the backend in `api/strava-callback.ts` to Vercel (free tier works)
+2. Update Strava app settings with your Vercel domain as Authorization Callback Domain
+3. Add `EXPO_PUBLIC_STRAVA_OAUTH_BACKEND` to your Vibecode ENV tab
+4. Test the OAuth flow before submitting to App Store
 
 ## Features
 
@@ -62,7 +64,7 @@ PACER integrates with Strava to upload your runs:
 
 ### Strava Callback Domain
 
-When setting up your Strava app, the Authorization Callback Domain must be set to `vibecode` (without any slashes or protocol).
+When setting up your Strava app, the Authorization Callback Domain must match your backend domain. See [BACKEND_DEPLOYMENT.md](./BACKEND_DEPLOYMENT.md) for setup details.
 
 ## Becoming a Pacer
 

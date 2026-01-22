@@ -13,14 +13,13 @@ const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
 // Backend OAuth handler URL
 // This is a serverless function that exchanges the authorization code for tokens
-// The backend is responsible for handling the Strava OAuth callback
-// For now, using a placeholder - you'll need to set up your own backend
+// Deploy this to Vercel or any serverless platform
+// For production, you'll need to update this to your actual backend URL
 const STRAVA_OAUTH_BACKEND = process.env.EXPO_PUBLIC_STRAVA_OAUTH_BACKEND || 'https://pacer-backend.vercel.app';
 
 // The redirect URI that Strava will use
 // This must point to YOUR backend's OAuth callback endpoint
-// Your backend should be registered in Strava settings as the Authorization Callback Domain
-const STRAVA_REDIRECT_URI = `${STRAVA_OAUTH_BACKEND}/api/strava/callback`;
+const STRAVA_REDIRECT_URI = `${STRAVA_OAUTH_BACKEND}/api/strava-callback`;
 
 // Export for debugging
 export function getRedirectUri(): string {

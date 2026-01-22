@@ -1,62 +1,61 @@
 /**
  * Strava OAuth Callback Handler
- * This serverless function handles the OAuth callback from Strava
  *
- * Environment variables needed:
+ * This is a Vercel serverless function that:
+ * 1. Receives the OAuth authorization code from Strava
+ * 2. Exchanges it for access/refresh tokens with Strava API
+ * 3. Returns tokens to the mobile app via deep link
+ *
+ * Environment variables (set in Vercel):
  * - STRAVA_CLIENT_ID
  * - STRAVA_CLIENT_SECRET
- *
- * Deployed to: https://pacer-backend.vercel.app/api/strava-callback
- *
- * Flow:
- * 1. User clicks "Connect Strava" in app
- * 2. Browser opens Strava OAuth with redirect_uri pointing to this endpoint
- * 3. Strava redirects to this function with authorization code
- * 4. This function exchanges code for tokens with Strava
- * 5. This function redirects back to app with deep link: vibecode://strava-callback?accessToken=...
  */
 
 export default async function handler(req: any, res: any) {
-  // Handle CORS
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    );
     res.status(200).end();
     return;
   }
 
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   try {
-    const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID || '';
-    const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET || '';
+    const { code, error, error_description } = req.query;
 
-    const { code, error, state } = req.query;
-
-    console.log('Strava OAuth callback received:', { code, error, state });
-
-    // Check for errors from Strava
+    // Handle Strava error responses
     if (error) {
-      const errorMessage = Array.isArray(error) ? error[0] : error;
-      console.error('Strava OAuth error:', errorMessage);
+      const errorMsg = error_description || error;
+      console.error('Strava OAuth error:', errorMsg);
       return res.redirect(
-        `vibecode://strava-callback?error=${encodeURIComponent(errorMessage)}`
+        `vibecode://strava-callback?error=${encodeURIComponent(errorMsg)}`
       );
     }
 
-    // Validate code
+    // Validate authorization code
     if (!code) {
       console.error('No authorization code received');
-      return res.redirect('vibecode://strava-callback?error=no_code');
+      return res.redirect('vibecode://strava-callback?error=no_authorization_code');
     }
 
     const authCode = Array.isArray(code) ? code[0] : code;
+    const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
+    const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
-    // Exchange code for tokens
-    console.log('Exchanging code for tokens...');
+    if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+      console.error('Missing Strava credentials in environment');
+      return res.redirect('vibecode://strava-callback?error=server_misconfigured');
+    }
+
+    // Exchange authorization code for tokens
+    console.log('Exchanging authorization code for tokens...');
     const tokenResponse = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -71,37 +70,36 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error('Token exchange failed:', tokenResponse.status, errorText);
+      const errorData = await tokenResponse.text();
+      console.error('Token exchange failed:', tokenResponse.status, errorData);
       return res.redirect('vibecode://strava-callback?error=token_exchange_failed');
     }
 
     const tokenData = await tokenResponse.json();
-    console.log('Token exchange successful');
 
-    // Extract token data
-    const accessToken = tokenData.access_token;
-    const refreshToken = tokenData.refresh_token;
-    const expiresAt = tokenData.expires_at;
-    const athleteId = tokenData.athlete?.id?.toString() || '';
+    // Validate token response
+    const { access_token, refresh_token, expires_at, athlete } = tokenData;
 
-    if (!accessToken || !refreshToken || !expiresAt || !athleteId) {
-      console.error('Missing token data:', { accessToken, refreshToken, expiresAt, athleteId });
-      return res.redirect('vibecode://strava-callback?error=missing_token_data');
+    if (!access_token || !refresh_token || !expires_at || !athlete?.id) {
+      console.error('Invalid token response from Strava:', tokenData);
+      return res.redirect('vibecode://strava-callback?error=invalid_token_response');
     }
 
-    // Redirect back to app with tokens via deep link
-    const deepLinkUrl = `vibecode://strava-callback?` +
-      `accessToken=${encodeURIComponent(accessToken)}` +
-      `&refreshToken=${encodeURIComponent(refreshToken)}` +
-      `&expiresAt=${encodeURIComponent(expiresAt)}` +
-      `&athleteId=${encodeURIComponent(athleteId)}`;
+    console.log('Successfully exchanged code for tokens');
+
+    // Redirect back to app with tokens as query parameters
+    const deepLink = new URL('vibecode://strava-callback');
+    deepLink.searchParams.set('accessToken', access_token);
+    deepLink.searchParams.set('refreshToken', refresh_token);
+    deepLink.searchParams.set('expiresAt', expires_at.toString());
+    deepLink.searchParams.set('athleteId', athlete.id.toString());
 
     console.log('Redirecting to app with tokens');
-    return res.redirect(deepLinkUrl);
-  } catch (error) {
-    console.error('Unexpected error in Strava callback:', error);
+    return res.redirect(deepLink.toString());
+  } catch (err) {
+    console.error('Unexpected error in Strava callback handler:', err);
     return res.redirect('vibecode://strava-callback?error=unexpected_error');
   }
 }
+
 
