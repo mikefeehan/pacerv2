@@ -11,10 +11,16 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Use Expo's auth proxy - this is the standard way for Expo apps
-// The redirect URI will be something like: https://auth.expo.io/@vibecode/vibecode
-// In Strava settings, ONLY set Authorization Callback Domain to: auth.expo.io
-const STRAVA_REDIRECT_URI = `https://auth.expo.io/@vibecode/vibecode`;
+// Backend OAuth handler URL
+// This is a serverless function that exchanges the authorization code for tokens
+// The backend is responsible for handling the Strava OAuth callback
+// For now, using a placeholder - you'll need to set up your own backend
+const STRAVA_OAUTH_BACKEND = process.env.EXPO_PUBLIC_STRAVA_OAUTH_BACKEND || 'https://pacer-backend.vercel.app';
+
+// The redirect URI that Strava will use
+// This must point to YOUR backend's OAuth callback endpoint
+// Your backend should be registered in Strava settings as the Authorization Callback Domain
+const STRAVA_REDIRECT_URI = `${STRAVA_OAUTH_BACKEND}/api/strava/callback`;
 
 // Export for debugging
 export function getRedirectUri(): string {
@@ -166,11 +172,11 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
   }
 
   try {
-    console.log('Starting Strava OAuth...');
+    console.log('Starting Strava OAuth with backend...');
     console.log('Client ID:', STRAVA_CLIENT_ID);
-    console.log('Redirect URI:', STRAVA_REDIRECT_URI);
+    console.log('Backend:', STRAVA_OAUTH_BACKEND);
 
-    // Build OAuth URL
+    // Build OAuth URL that points to Strava
     const authUrl = `https://www.strava.com/oauth/authorize?` +
       `client_id=${STRAVA_CLIENT_ID}` +
       `&redirect_uri=${encodeURIComponent(STRAVA_REDIRECT_URI)}` +
@@ -181,82 +187,58 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     console.log('Auth URL:', authUrl);
 
     // Open browser for OAuth
-    // The second parameter is the redirect scheme - Expo will watch for this
+    // Strava will redirect to your backend, which will handle token exchange
+    // and then redirect back to the app using a deep link
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      'exp://'  // Expo will handle redirects back to the app through the proxy
+      'vibecode://'  // App will receive deep link with tokens from backend
     );
 
     console.log('Auth result type:', result.type);
-    console.log('Auth result:', JSON.stringify(result));
 
     if (result.type !== 'success' || !result.url) {
       console.log('Auth was cancelled or failed');
       return null;
     }
 
-    // Parse the authorization code from the URL
-    // Custom URL schemes don't work with new URL(), so manually parse
-    let code: string | null = null;
+    // Parse tokens from the deep link URL
+    // Backend will return: vibecode://strava-callback?token=...&refreshToken=...
+    let tokens: StravaTokens | null = null;
     try {
-      // Try to extract code from query params manually
       const urlString = result.url;
       console.log('OAuth callback URL:', urlString);
 
-      // Look for code parameter in the URL
-      const codeMatch = urlString.match(/[?&]code=([^&]+)/);
-      if (codeMatch) {
-        code = decodeURIComponent(codeMatch[1]);
-        console.log('Got authorization code');
-      }
+      // Extract token data from URL params
+      const tokenMatch = urlString.match(/[?&]accessToken=([^&]+)/);
+      const refreshMatch = urlString.match(/[?&]refreshToken=([^&]+)/);
+      const expiresMatch = urlString.match(/[?&]expiresAt=([^&]+)/);
+      const athleteMatch = urlString.match(/[?&]athleteId=([^&]+)/);
 
-      // Also check for error
-      const errorMatch = urlString.match(/[?&]error=([^&]+)/);
-      if (errorMatch) {
-        console.error('Strava OAuth error:', decodeURIComponent(errorMatch[1]));
-        return null;
+      if (tokenMatch && refreshMatch && expiresMatch && athleteMatch) {
+        tokens = {
+          accessToken: decodeURIComponent(tokenMatch[1]),
+          refreshToken: decodeURIComponent(refreshMatch[1]),
+          expiresAt: parseInt(decodeURIComponent(expiresMatch[1]), 10),
+          athleteId: decodeURIComponent(athleteMatch[1]),
+        };
+        console.log('Got tokens from backend');
+      } else {
+        // Check for error from backend
+        const errorMatch = urlString.match(/[?&]error=([^&]+)/);
+        if (errorMatch) {
+          console.error('OAuth error:', decodeURIComponent(errorMatch[1]));
+        }
       }
     } catch (parseError) {
       console.error('Failed to parse OAuth callback URL:', parseError);
+    }
+
+    if (!tokens) {
+      console.error('No tokens received from backend');
       return null;
     }
 
-    if (!code) {
-      console.error('No authorization code received from URL:', result.url);
-      return null;
-    }
-
-    // Exchange code for tokens
-    console.log('Exchanging code for tokens...');
-    const tokenResponse = await fetch('https://www.strava.com/oauth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error('Token exchange failed:', tokenResponse.status, errorText);
-      throw new Error('Failed to exchange code for tokens');
-    }
-
-    const tokenData = await tokenResponse.json();
-    console.log('Token exchange successful!');
-
-    const tokens: StravaTokens = {
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      expiresAt: tokenData.expires_at,
-      athleteId: tokenData.athlete?.id?.toString() || '',
-    };
-
+    // Store tokens
     await storeTokens(tokens);
     console.log('Tokens stored successfully');
     return tokens;
