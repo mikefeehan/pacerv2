@@ -201,17 +201,24 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
     }
 
     // Parse tokens from the deep link URL
-    // Backend will return: vibecode://strava-callback?token=...&refreshToken=...
+    // Backend will return: vibecode://strava-callback?accessToken=...&refreshToken=...
     let tokens: StravaTokens | null = null;
     try {
       const urlString = result.url;
-      console.log('OAuth callback URL:', urlString);
+      console.log('=== OAUTH CALLBACK URL ===');
+      console.log(urlString);
+      console.log('==========================');
 
       // Extract token data from URL params
       const tokenMatch = urlString.match(/[?&]accessToken=([^&]+)/);
       const refreshMatch = urlString.match(/[?&]refreshToken=([^&]+)/);
       const expiresMatch = urlString.match(/[?&]expiresAt=([^&]+)/);
       const athleteMatch = urlString.match(/[?&]athleteId=([^&]+)/);
+
+      console.log('Token match:', !!tokenMatch);
+      console.log('Refresh match:', !!refreshMatch);
+      console.log('Expires match:', !!expiresMatch);
+      console.log('Athlete match:', !!athleteMatch);
 
       if (tokenMatch && refreshMatch && expiresMatch && athleteMatch) {
         tokens = {
@@ -220,12 +227,14 @@ export async function startStravaOAuth(): Promise<StravaTokens | null> {
           expiresAt: parseInt(decodeURIComponent(expiresMatch[1]), 10),
           athleteId: decodeURIComponent(athleteMatch[1]),
         };
-        console.log('Got tokens from backend');
+        console.log('Got tokens from backend!');
       } else {
         // Check for error from backend
         const errorMatch = urlString.match(/[?&]error=([^&]+)/);
         if (errorMatch) {
           console.error('OAuth error:', decodeURIComponent(errorMatch[1]));
+        } else {
+          console.log('No tokens found in URL - check URL format');
         }
       }
     } catch (parseError) {
