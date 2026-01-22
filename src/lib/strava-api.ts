@@ -11,11 +11,9 @@ WebBrowser.maybeCompleteAuthSession();
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID || '';
 const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET || '';
 
-// Use AuthSession.makeRedirectUri which creates the correct redirect URL
-// For Expo Go, this uses the Expo proxy. For standalone apps, it uses the app scheme.
-const STRAVA_REDIRECT_URI = AuthSession.makeRedirectUri({
-  native: 'vibecode://strava-callback',
-});
+// Use the app scheme directly as redirect URI
+// Strava needs a custom scheme that can be opened in the app
+const STRAVA_REDIRECT_URI = 'vibecode://strava-callback';
 
 // Storage keys
 const STRAVA_ACCESS_TOKEN_KEY = 'strava_access_token';

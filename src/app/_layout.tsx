@@ -45,6 +45,7 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
         <Stack.Screen name="strava-connect" />
+        <Stack.Screen name="strava-callback" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="home" />
         <Stack.Screen name="pre-run" />
