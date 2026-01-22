@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { RunSession, RunStats, HypeEvent, TriggerType } from './types';
+import type { GPSPoint } from './gps-tracking';
 
-// Active Run Store (ephemeral) - MULTI-PACER SUPPORT
+// Active Run Store (ephemeral) - MULTI-PACER SUPPORT + GPS TRACKING
 interface ActiveRunState {
   session: RunSession | null;
   stats: RunStats;
@@ -12,6 +13,9 @@ interface ActiveRunState {
   usedTrackIds: Set<string>;
   // Track which pacer spoke last for rotation
   lastPacerIndex: number;
+  // GPS tracking
+  gpsPoints: GPSPoint[];
+  isTrackingGPS: boolean;
 
   // Actions
   startRun: (session: Omit<RunSession, 'id' | 'startTime' | 'hypeEvents' | 'recapTracks'>) => void;
@@ -23,6 +27,10 @@ interface ActiveRunState {
   markTrackUsed: (trackId: string) => void;
   getNextPacerIndex: () => number;
   resetRun: () => void;
+  // GPS actions
+  addGPSPoint: (point: GPSPoint) => void;
+  setIsTrackingGPS: (tracking: boolean) => void;
+  getGPSPoints: () => GPSPoint[];
 }
 
 const initialStats: RunStats = {
@@ -42,6 +50,8 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
   usedMemoIds: new Set(),
   usedTrackIds: new Set(),
   lastPacerIndex: -1,
+  gpsPoints: [],
+  isTrackingGPS: false,
 
   startRun: (sessionData) => {
     const session: RunSession = {
@@ -59,6 +69,8 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
       usedMemoIds: new Set(),
       usedTrackIds: new Set(),
       lastPacerIndex: -1,
+      gpsPoints: [],
+      isTrackingGPS: false,
     });
   },
 
@@ -149,7 +161,18 @@ export const useActiveRunStore = create<ActiveRunState>((set, get) => ({
     usedMemoIds: new Set(),
     usedTrackIds: new Set(),
     lastPacerIndex: -1,
+    gpsPoints: [],
+    isTrackingGPS: false,
   }),
+
+  // GPS tracking actions
+  addGPSPoint: (point) => set((state) => ({
+    gpsPoints: [...state.gpsPoints, point],
+  })),
+
+  setIsTrackingGPS: (tracking) => set({ isTrackingGPS: tracking }),
+
+  getGPSPoints: () => get().gpsPoints,
 }));
 
 // Struggle Detection Logic

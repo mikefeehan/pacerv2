@@ -1,39 +1,50 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import { Activity, Lock, CheckCircle } from 'lucide-react-native';
+import { Activity, Lock, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { Button } from '@/components/Button';
 import { useAuthStore, usePacerStore } from '@/lib/stores';
 import { MOCK_PACERS } from '@/lib/mock-data';
+import {
+  startStravaOAuth,
+  isStravaConfigured,
+  isStravaConnected,
+} from '@/lib/strava-api';
 import * as Haptics from 'expo-haptics';
 
 export default function StravaConnectScreen() {
   const router = useRouter();
-  const updateUser = useAuthStore((s) => s.updateUser);
   const setUser = useAuthStore((s) => s.setUser);
   const setPacers = usePacerStore((s) => s.setPacers);
   const [isConnecting, setIsConnecting] = React.useState(false);
   const [isConnected, setIsConnected] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const handleConnectStrava = async () => {
-    setIsConnecting(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  // Check if already connected on mount
+  React.useEffect(() => {
+    checkExistingConnection();
+  }, []);
 
-    // Simulate Strava OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  const checkExistingConnection = async () => {
+    const connected = await isStravaConnected();
+    if (connected) {
+      setIsConnected(true);
+      // Auto-navigate after a brief moment
+      setTimeout(() => {
+        completeConnection('existing_user');
+      }, 500);
+    }
+  };
 
-    // Mock successful connection
-    setIsConnected(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Create mock user with Strava connected
+  const completeConnection = (athleteId: string) => {
+    // Create user with Strava connected
     setUser({
       id: 'user_1',
       name: 'Runner',
-      stravaUserId: 'strava_12345',
+      stravaUserId: athleteId,
       stravaConnected: true,
       spotifyConnected: false,
       onboardingComplete: false,
@@ -42,11 +53,60 @@ export default function StravaConnectScreen() {
     // Load mock pacers
     setPacers(MOCK_PACERS);
 
-    // Wait a moment to show success state
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     // Navigate to onboarding
     router.replace('/onboarding');
+  };
+
+  const handleConnectStrava = async () => {
+    setIsConnecting(true);
+    setError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Check if Strava is configured
+    if (!isStravaConfigured()) {
+      // Fall back to demo mode if not configured
+      console.log('Strava not configured, using demo mode');
+      await simulateConnection();
+      return;
+    }
+
+    try {
+      // Start real OAuth flow
+      const tokens = await startStravaOAuth();
+
+      if (tokens) {
+        setIsConnected(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Wait a moment to show success state
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        completeConnection(tokens.athleteId);
+      } else {
+        // User cancelled or error occurred
+        setError('Connection was cancelled. Please try again.');
+        setIsConnecting(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (e) {
+      console.error('Strava OAuth error:', e);
+      setError('Failed to connect to Strava. Please try again.');
+      setIsConnecting(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
+  // Demo mode fallback when Strava API keys aren't configured
+  const simulateConnection = async () => {
+    // Simulate OAuth flow
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    setIsConnected(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    completeConnection('demo_strava_12345');
   };
 
   return (
@@ -73,8 +133,8 @@ export default function StravaConnectScreen() {
                 Connect Strava
               </Text>
               <Text className="text-pacer-muted text-center mt-3 leading-6 px-4">
-                A Strava account is required to use PACER.{'\n'}
-                We'll read your run data to detect when you need a boost.
+                Connect your Strava account to upload runs{'\n'}
+                with your PACER recap and route map.
               </Text>
             </Animated.View>
 
@@ -92,21 +152,21 @@ export default function StravaConnectScreen() {
                   <View className="flex-row items-center">
                     <CheckCircle size={20} color="#34D399" />
                     <Text className="text-pacer-white ml-3 flex-1">
-                      Read your running activities
+                      Upload your runs with GPS data
                     </Text>
                   </View>
 
                   <View className="flex-row items-center">
                     <CheckCircle size={20} color="#34D399" />
                     <Text className="text-pacer-white ml-3 flex-1">
-                      Live pace and distance during runs
+                      Add PACER recap to activity description
                     </Text>
                   </View>
 
                   <View className="flex-row items-center">
                     <CheckCircle size={20} color="#34D399" />
                     <Text className="text-pacer-white ml-3 flex-1">
-                      Update activity descriptions (with your approval)
+                      Show your route map with splits
                     </Text>
                   </View>
                 </View>
@@ -119,6 +179,21 @@ export default function StravaConnectScreen() {
                 </View>
               </View>
             </Animated.View>
+
+            {/* Error Message */}
+            {error && (
+              <Animated.View
+                entering={FadeIn.duration(300)}
+                className="mt-4"
+              >
+                <View className="flex-row items-center bg-red-500/20 rounded-xl p-4">
+                  <AlertCircle size={20} color="#EF4444" />
+                  <Text className="text-red-400 ml-3 flex-1 text-sm">
+                    {error}
+                  </Text>
+                </View>
+              </Animated.View>
+            )}
 
             {/* Spacer */}
             <View className="flex-1" />
@@ -142,12 +217,12 @@ export default function StravaConnectScreen() {
                   fullWidth
                   loading={isConnecting}
                 >
-                  {isConnecting ? 'Connecting...' : 'Authorize Strava'}
+                  {isConnecting ? 'Connecting...' : 'Connect Strava'}
                 </Button>
               )}
 
               <Text className="text-pacer-muted text-xs text-center mt-4 px-8">
-                By connecting, you agree to share your Strava activity data with PACER.
+                By connecting, you agree to share your activity data with Strava.
               </Text>
             </Animated.View>
           </View>

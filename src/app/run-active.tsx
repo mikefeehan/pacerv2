@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Modal } from 'react-native';
+import { View, Text, Pressable, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -11,21 +11,31 @@ import Animated, {
   Easing,
   FadeIn,
 } from 'react-native-reanimated';
-import { Square, Volume2, Vibrate } from 'lucide-react-native';
+import { Square, Volume2, Vibrate, MapPin } from 'lucide-react-native';
 import { PacerLogo } from '@/components/PacerLogo';
 import { Button } from '@/components/Button';
 import { usePacerStore, useRunSettingsStore } from '@/lib/stores';
 import { useActiveRunStore, STRUGGLE_CONFIG } from '@/lib/run-store';
 import {
-  DEMO_RUN_POINTS,
   getAIVoiceLine,
   getMemoForPacer,
   getTrackForPacer,
 } from '@/lib/mock-data';
 import { VIBES } from '@/lib/types';
-import type { TriggerType, VoiceMemo } from '@/lib/types';
+import type { TriggerType } from '@/lib/types';
 import { triggerHypeHaptics, stopHaptics, getHapticPatternDescription } from '@/lib/haptics';
 import * as Haptics from 'expo-haptics';
+import {
+  requestLocationPermissions,
+  startLocationTracking,
+  calculateTotalDistance,
+  calculateRollingPace,
+  speedToPace,
+  formatPace,
+  formatDuration,
+  type GPSPoint,
+} from '@/lib/gps-tracking';
+import type * as Location from 'expo-location';
 
 export default function RunActiveScreen() {
   const router = useRouter();
@@ -42,7 +52,6 @@ export default function RunActiveScreen() {
   const updateStats = useActiveRunStore((s) => s.updateStats);
   const addHypeEvent = useActiveRunStore((s) => s.addHypeEvent);
   const stats = useActiveRunStore((s) => s.stats);
-  const session = useActiveRunStore((s) => s.session);
   const hypeEventCount = useActiveRunStore((s) => s.hypeEventCount);
   const lastHypeEventTime = useActiveRunStore((s) => s.lastHypeEventTime);
   const usedMemoIds = useActiveRunStore((s) => s.usedMemoIds);
@@ -50,6 +59,9 @@ export default function RunActiveScreen() {
   const markMemoUsed = useActiveRunStore((s) => s.markMemoUsed);
   const markTrackUsed = useActiveRunStore((s) => s.markTrackUsed);
   const getNextPacerIndex = useActiveRunStore((s) => s.getNextPacerIndex);
+  const addGPSPoint = useActiveRunStore((s) => s.addGPSPoint);
+  const setIsTrackingGPS = useActiveRunStore((s) => s.setIsTrackingGPS);
+  const gpsPoints = useActiveRunStore((s) => s.gpsPoints);
 
   const selectedPacers = pacers.filter((p) => selectedPacerIds.includes(p.pacerUserId));
   const pacerNames = selectedPacers.map(p => p.pacerName).join(' + ');
@@ -60,10 +72,13 @@ export default function RunActiveScreen() {
   const [currentPacerName, setCurrentPacerName] = useState('');
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [hapticsActive, setHapticsActive] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<'requesting' | 'tracking' | 'error'>('requesting');
 
-  const simulationIndexRef = useRef(0);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const usedLinesRef = useRef(new Set<string>());
   const baselinePaceRef = useRef(0);
+  const startTimeRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pulsing animation
   const pulseScale = useSharedValue(1);
@@ -83,7 +98,7 @@ export default function RunActiveScreen() {
     transform: [{ scale: pulseScale.value }],
   }));
 
-  // Start the run session
+  // Start the run session and GPS tracking
   useEffect(() => {
     if (selectedPacers.length === 0) {
       router.replace('/home');
@@ -99,43 +114,86 @@ export default function RunActiveScreen() {
       musicEnabled,
     });
 
-    // Start simulation
-    const interval = setInterval(() => {
-      const index = simulationIndexRef.current;
-      if (index >= DEMO_RUN_POINTS.length) {
-        clearInterval(interval);
-        handleEndRun();
-        return;
-      }
+    startTimeRef.current = Date.now();
 
-      const point = DEMO_RUN_POINTS[index];
-      const newStats = {
-        elapsedTime: point.timeSeconds,
-        distance: point.distanceMiles,
-        currentPace: point.paceMinPerMile,
-        rollingPace: point.paceMinPerMile,
-        isRunning: true,
-      };
+    // Start GPS tracking
+    initializeGPSTracking();
 
-      updateStats(newStats);
-
-      // Set baseline pace after warmup
-      if (point.timeSeconds >= 360 && baselinePaceRef.current === 0) {
-        baselinePaceRef.current = point.paceMinPerMile;
-      }
-
-      // Check for triggers from demo data
-      if (point.trigger) {
-        triggerHypeEvent(point.trigger);
-      }
-
-      simulationIndexRef.current++;
+    // Start elapsed time timer
+    timerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      updateStats({ elapsedTime: elapsed });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      // Cleanup
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      stopHaptics();
+    };
   }, []);
 
-  const triggerHypeEvent = async (triggerType: TriggerType) => {
+  const initializeGPSTracking = async () => {
+    const hasPermission = await requestLocationPermissions();
+
+    if (!hasPermission) {
+      setGpsStatus('error');
+      Alert.alert(
+        'Location Required',
+        'PACER needs location access to track your run. Please enable location in Settings.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      const subscription = await startLocationTracking((point: GPSPoint) => {
+        addGPSPoint(point);
+        updateStatsFromGPS(point);
+      });
+
+      locationSubscriptionRef.current = subscription;
+      setIsTrackingGPS(true);
+      setGpsStatus('tracking');
+    } catch (error) {
+      console.error('Failed to start GPS tracking:', error);
+      setGpsStatus('error');
+    }
+  };
+
+  const updateStatsFromGPS = (newPoint: GPSPoint) => {
+    const points = [...gpsPoints, newPoint];
+
+    // Calculate distance from all GPS points
+    const totalDistance = calculateTotalDistance(points);
+
+    // Calculate current pace from speed
+    const currentPace = speedToPace(newPoint.speed);
+
+    // Calculate rolling pace from recent points
+    const rollingPace = calculateRollingPace(points, 10);
+
+    // Set baseline pace after warmup (6 minutes)
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    if (elapsed >= 360 && baselinePaceRef.current === 0 && rollingPace > 0) {
+      baselinePaceRef.current = rollingPace;
+    }
+
+    updateStats({
+      distance: totalDistance,
+      currentPace: currentPace || rollingPace,
+      rollingPace,
+    });
+
+    // Check for struggle triggers
+    checkForStruggles(elapsed, totalDistance, rollingPace);
+  };
+
+  const checkForStruggles = (elapsed: number, distance: number, rollingPace: number) => {
     // Check cooldown and max events
     const now = Date.now();
     const cooldownMs = STRUGGLE_CONFIG.COOLDOWN_SECONDS * 1000;
@@ -148,10 +206,34 @@ export default function RunActiveScreen() {
       return;
     }
 
+    // Check minimum thresholds
+    if (elapsed < STRUGGLE_CONFIG.MIN_TIME_SECONDS || distance < STRUGGLE_CONFIG.MIN_DISTANCE_MILES) {
+      return;
+    }
+
+    // Pace drop trigger
+    if (baselinePaceRef.current > 0 && rollingPace > 0) {
+      const paceIncrease = (rollingPace - baselinePaceRef.current) / baselinePaceRef.current;
+      if (paceIncrease >= STRUGGLE_CONFIG.PACE_DROP_THRESHOLD) {
+        triggerHypeEvent('pace_drop');
+        return;
+      }
+    }
+
+    // Stall trigger (after mile 2)
+    if (distance >= STRUGGLE_CONFIG.STALL_MIN_DISTANCE && baselinePaceRef.current > 0) {
+      const paceIncrease = (rollingPace - baselinePaceRef.current) / baselinePaceRef.current;
+      if (paceIncrease >= STRUGGLE_CONFIG.STALL_PACE_THRESHOLD) {
+        triggerHypeEvent('stall');
+        return;
+      }
+    }
+  };
+
+  const triggerHypeEvent = async (triggerType: TriggerType) => {
     // Trigger haptics 0.2s BEFORE voice (as per spec)
     if (hapticSettings.enabled) {
       setHapticsActive(true);
-      // Small delay then trigger haptics
       setTimeout(() => {
         triggerHypeHaptics(vibe, hapticSettings);
       }, 200);
@@ -185,13 +267,11 @@ export default function RunActiveScreen() {
         generatedText = memo.name;
         markMemoUsed(memo.id);
       } else {
-        // Fallback to AI if no memos available
         voiceType = 'ai';
         generatedText = getAIVoiceLine(vibe, usedLinesRef.current);
         usedLinesRef.current.add(generatedText);
       }
     } else {
-      // Mix mode - prefer real until we've used most of them
       const memo = getMemoForPacer(pacerUserId, vibe, usedMemoIds);
       if (memo && usedMemoIds.size < 4) {
         voiceType = 'real';
@@ -248,25 +328,20 @@ export default function RunActiveScreen() {
   };
 
   const handleEndRun = () => {
-    // Clean up haptics on run end
+    // Clean up
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     stopHaptics();
+    setIsTrackingGPS(false);
+
     const completedSession = endRun();
     if (completedSession) {
       router.replace('/run-recap');
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatPace = (pace: number) => {
-    if (!pace || pace === 0) return '--:--';
-    const mins = Math.floor(pace);
-    const secs = Math.round((pace - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -283,22 +358,40 @@ export default function RunActiveScreen() {
             PACER is with you.
           </Text>
           <Text className="text-pacer-muted mt-2 text-center">
-            Listening for struggle moments...
+            {gpsStatus === 'tracking'
+              ? 'Tracking your run...'
+              : gpsStatus === 'requesting'
+              ? 'Getting GPS signal...'
+              : 'GPS unavailable - tracking time only'}
           </Text>
 
+          {/* GPS Status Indicator */}
+          <View className="flex-row items-center mt-3">
+            <MapPin
+              size={14}
+              color={gpsStatus === 'tracking' ? '#34D399' : gpsStatus === 'requesting' ? '#FBBF24' : '#EF4444'}
+            />
+            <Text className={`ml-1.5 text-sm ${
+              gpsStatus === 'tracking' ? 'text-green-400' :
+              gpsStatus === 'requesting' ? 'text-yellow-400' : 'text-red-400'
+            }`}>
+              {gpsStatus === 'tracking' ? 'GPS Active' : gpsStatus === 'requesting' ? 'Connecting...' : 'No GPS'}
+            </Text>
+          </View>
+
           {/* Pacers + Vibe */}
-          <View className="mt-8 bg-pacer-surface px-6 py-3 rounded-full">
+          <View className="mt-6 bg-pacer-surface px-6 py-3 rounded-full">
             <Text className="text-pacer-accent font-medium">
               {pacerNames} — {vibeConfig?.emoji} {vibeConfig?.label}
             </Text>
           </View>
 
-          {/* Live Stats (subtle) */}
+          {/* Live Stats */}
           <View className="flex-row items-center mt-12 gap-x-8">
             <View className="items-center">
               <Text className="text-pacer-muted text-sm">Time</Text>
               <Text className="text-pacer-white text-lg font-mono">
-                {formatTime(Math.round(stats.elapsedTime))}
+                {formatDuration(Math.round(stats.elapsedTime))}
               </Text>
             </View>
             <View className="items-center">

@@ -6,7 +6,8 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 
 ## Features
 
-- **Strava Integration**: Connect your Strava account to track runs
+- **Real GPS Tracking**: Track your runs with accurate GPS location data
+- **Strava Integration**: Upload runs as GPX files with map, splits, and PACER recap
 - **Pacer System**: Invite friends to become your Pacers
 - **Pacer Identity**: Choose your Pacer type (Cheerful, Fired Up, Harsh Coach, Calm)
 - **Public Pacers**: Discover and add verified/curated public pacers
@@ -18,6 +19,27 @@ PACER is a running companion app that integrates with Strava. During a run, PACE
 - **Struggle Detection**: Automatic detection of when you need a boost
 - **Hype Events**: Voice + music triggered during tough moments
 - **Haptic Feedback**: Vibe-specific haptic patterns during hype moments
+- **Post-Run Recap**: Beautiful recap with map, stats, and Pacer motivational message
+
+## Strava Integration
+
+PACER integrates with Strava to upload your runs:
+
+1. **Connect Strava**: OAuth flow to connect your Strava account
+2. **Track Your Run**: Real GPS tracking records your route
+3. **GPX Upload**: After your run, upload to Strava with:
+   - Full route map with your path
+   - Distance, duration, and pace stats
+   - PACER recap with Pacer motivational message
+   - Songs that carried you during the run
+
+### Setting Up Strava (for real uploads)
+
+To enable real Strava uploads, add these environment variables in the ENV tab:
+- `EXPO_PUBLIC_STRAVA_CLIENT_ID` - Your Strava app client ID
+- `EXPO_PUBLIC_STRAVA_CLIENT_SECRET` - Your Strava app client secret
+
+Without these, the app runs in demo mode with simulated Strava connection.
 
 ## Becoming a Pacer
 
@@ -103,11 +125,32 @@ Each run has a single "vibe" that controls voice style, intensity, and music sel
 
 - Expo SDK 53 + React Native
 - Expo Router (file-based routing)
+- Expo Location (GPS tracking)
 - NativeWind + Tailwind CSS
 - Zustand (state management)
 - React Native Reanimated (animations)
+- React Native Maps (route visualization)
 - Expo Haptics (haptic feedback)
 - Lucide Icons
+
+## Run Tracking
+
+During a run, PACER:
+- Tracks your GPS location with high accuracy
+- Calculates distance, pace, and duration in real-time
+- Detects struggle moments (pace drops, stalls, late-run fatigue)
+- Triggers hype events with Pacer voice + music
+- Records your route for the post-run map
+
+## Post-Run Recap
+
+After your run, see:
+- **Route Map**: Your GPS track visualized on a map
+- **Stats**: Distance, duration, pace, estimated calories
+- **Pacer Message**: Motivational text from your Pacer based on vibe
+- **Songs**: The tracks that carried you through hype moments
+- **Hype Timeline**: When your Pacers came through for you
+- **Upload to Strava**: One-tap GPX upload with full recap
 
 ## Demo Mode
 
