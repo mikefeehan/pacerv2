@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Pressable, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -21,6 +21,22 @@ import { cn } from '@/lib/cn';
 import { VIBES } from '@/lib/types';
 import type { PacerRelationship, PacerStatus } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
+
+// Helper to get proper image URI for local public folder images
+const getImageUri = (uri: string | undefined): string | undefined => {
+  if (!uri) return undefined;
+  // If it starts with /, it's a local public folder image
+  if (uri.startsWith('/')) {
+    // On web, public folder images are served from root
+    if (Platform.OS === 'web') {
+      return uri;
+    }
+    // On native, we need to use require or a different approach
+    // For now, return as-is and it should work on web
+    return uri;
+  }
+  return uri;
+};
 
 const STATUS_CONFIG: Record<
   PacerStatus,
@@ -81,7 +97,7 @@ function PacerCard({
         {/* Avatar */}
         {pacer.pacerAvatar ? (
           <Image
-            source={{ uri: pacer.pacerAvatar }}
+            source={{ uri: getImageUri(pacer.pacerAvatar) }}
             className="w-14 h-14 rounded-full"
           />
         ) : (
@@ -196,7 +212,7 @@ export default function HomeScreen() {
                       <View key={pacer.pacerUserId} className="flex-row items-center mr-2 mb-1">
                         {pacer.pacerAvatar ? (
                           <Image
-                            source={{ uri: pacer.pacerAvatar }}
+                            source={{ uri: getImageUri(pacer.pacerAvatar) }}
                             className="w-8 h-8 rounded-full"
                           />
                         ) : (
