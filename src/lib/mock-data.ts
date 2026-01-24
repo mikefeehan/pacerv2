@@ -11,7 +11,7 @@ export const MOCK_PACERS: PacerRelationship[] = [
     runnerUserId: 'user_1',
     pacerUserId: 'pacer_mike',
     pacerName: 'Mike',
-    pacerAvatar: '/image-1769224162.jpeg',
+    pacerAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face',
     status: 'ready',
     voiceReady: true,
     musicReady: true,
