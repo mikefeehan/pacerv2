@@ -307,24 +307,7 @@ export default function HomeScreen() {
               </>
             )}
 
-            {/* Demo Mode Button */}
-            <View className="mt-8 mb-8">
-              <Pressable
-                onPress={() => {
-                  // Set first two ready pacers and navigate directly to run
-                  if (readyPacers.length > 0) {
-                    const demoIds = readyPacers.slice(0, 2).map(p => p.pacerUserId);
-                    useRunSettingsStore.getState().setSelectedPacers(demoIds);
-                  }
-                  router.push('/pre-run');
-                }}
-                className="bg-pacer-surface/50 border border-dashed border-pacer-border rounded-xl p-4"
-              >
-                <Text className="text-pacer-muted text-center text-sm">
-                  Demo Mode: Start a simulated multi-pacer run
-                </Text>
-              </Pressable>
-            </View>
+            <View className="h-8" />
           </Animated.View>
         </ScrollView>
       </SafeAreaView>

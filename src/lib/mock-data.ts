@@ -9,6 +9,15 @@ import type {
 export const MOCK_PACERS: PacerRelationship[] = [
   {
     runnerUserId: 'user_1',
+    pacerUserId: 'pacer_mike',
+    pacerName: 'Mike',
+    pacerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
+    status: 'ready',
+    voiceReady: true,
+    musicReady: true,
+  },
+  {
+    runnerUserId: 'user_1',
     pacerUserId: 'pacer_ashley',
     pacerName: 'Ashley',
     pacerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
@@ -33,15 +42,6 @@ export const MOCK_PACERS: PacerRelationship[] = [
     status: 'ready',
     voiceReady: true,
     musicReady: true,
-  },
-  {
-    runnerUserId: 'user_1',
-    pacerUserId: 'pacer_me',
-    pacerName: 'Me',
-    pacerAvatar: undefined,
-    status: 'needs_setup',
-    voiceReady: false,
-    musicReady: false,
   },
 ];
 
