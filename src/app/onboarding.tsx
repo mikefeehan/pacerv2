@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/cn';
 import { PACER_TYPES } from '@/lib/types';
 import type { VoiceMemo, PacerType } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 const TOTAL_STEPS = 3;
 const MIN_CORE_PHRASES = 3;
@@ -40,20 +41,87 @@ export default function OnboardingScreen() {
   const [bonusMemos, setBonusMemos] = useState<VoiceMemo[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [playingMemoId, setPlayingMemoId] = useState<string | null>(null);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   const selectedTypeConfig = PACER_TYPES.find(t => t.type === selectedPacerType);
 
-  // Simulate recording a memo
-  const handleStartRecording = (isBonus: boolean) => {
+  // Request permissions on mount
+  useEffect(() => {
+    (async () => {
+      const { status } = await Audio.requestPermissionsAsync();
+      setPermissionGranted(status === 'granted');
+
+      // Configure audio mode for recording and playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+    })();
+
+    // Cleanup on unmount
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync();
+      }
+    };
+  }, []);
+
+  // Start actual recording
+  const handleStartRecording = async (isBonus: boolean) => {
+    if (!permissionGranted) {
+      console.log('No permission to record');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsRecording(true);
 
-    const duration = 2 + Math.random() * 2; // 2-4 seconds
-    setTimeout(() => {
+    try {
+      // Configure for recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+      recordingRef.current = recording;
+
+      // Auto-stop after 4 seconds
+      setTimeout(async () => {
+        await handleStopRecording(isBonus);
+      }, 4000);
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      setIsRecording(false);
+    }
+  };
+
+  // Stop recording and save
+  const handleStopRecording = async (isBonus: boolean) => {
+    if (!recordingRef.current) {
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      const status = await recordingRef.current.getStatusAsync();
+
+      const duration = status.durationMillis ? Math.round(status.durationMillis / 1000) : 3;
+
       const newMemo: VoiceMemo = {
         id: `memo_${Date.now()}`,
-        url: '',
-        duration: Math.round(duration),
+        url: uri || '',
+        duration,
         vibeTag: isBonus ? undefined : selectedPacerType ?? undefined,
         isBonus,
         name: isBonus
@@ -67,9 +135,14 @@ export default function OnboardingScreen() {
       } else {
         setCorePhrases((prev) => [...prev, newMemo]);
       }
-      setIsRecording(false);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, duration * 1000);
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+    } finally {
+      recordingRef.current = null;
+      setIsRecording(false);
+    }
   };
 
   const handleDeleteMemo = (id: string, isBonus: boolean) => {
@@ -81,16 +154,59 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handlePlayMemo = (id: string, memos: VoiceMemo[]) => {
+  const handlePlayMemo = async (id: string, memos: VoiceMemo[]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // If already playing this memo, stop it
     if (playingMemoId === id) {
-      setPlayingMemoId(null);
-    } else {
-      setPlayingMemoId(id);
-      const memo = memos.find((m) => m.id === id);
-      if (memo) {
-        setTimeout(() => setPlayingMemoId(null), memo.duration * 1000);
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
       }
+      setPlayingMemoId(null);
+      return;
+    }
+
+    // Stop any currently playing sound
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+
+    const memo = memos.find((m) => m.id === id);
+    if (!memo || !memo.url) {
+      console.log('No URL for memo:', memo?.id);
+      return;
+    }
+
+    try {
+      // Set audio mode for playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: memo.url },
+        { shouldPlay: true }
+      );
+
+      soundRef.current = sound;
+      setPlayingMemoId(id);
+
+      // Listen for playback status updates
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingMemoId(null);
+          sound.unloadAsync();
+          soundRef.current = null;
+        }
+      });
+    } catch (error) {
+      console.error('Failed to play memo:', error);
+      setPlayingMemoId(null);
     }
   };
 
